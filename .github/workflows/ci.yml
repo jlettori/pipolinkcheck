@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            artifact: pipolinkcheck-linux
+            binary: pipolinkcheck
+          - os: macos-latest
+            artifact: pipolinkcheck-macos
+            binary: pipolinkcheck
+          - os: windows-latest
+            artifact: pipolinkcheck-windows
+            binary: pipolinkcheck.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          check-latest: true
+      - run: go version
+      - name: Generate coverage
+        run: go test -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v7
+        with:
+          fail_ci_if_error: false
+      - name: Build
+        run: go build .
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.binary }}

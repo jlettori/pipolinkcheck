@@ -1,0 +1,6 @@
+pipolinkcheck
+pipolinkcheck-*
+coverage.html
+coverage.out
+.idea/
+tmp/
