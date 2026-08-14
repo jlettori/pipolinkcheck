@@ -81,10 +81,7 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
 
-	if err := cfg.finalize(); err != nil {
-		return nil, err
-	}
-	return cfg, nil
+	return NewConfigWithOptions(cfg)
 }
 
 // newFlagSet registers the command-line flags on a local FlagSet, leaving the
@@ -116,57 +113,44 @@ func printUsage() {
 }
 
 // NewConfigWithOptions creates and returns a new Config initialized with the provided values.
-func NewConfigWithOptions(opts *Config) (*Config, error) {
-	c := *opts
-	if err := c.finalize(); err != nil {
-		return nil, err
-	}
-	return &c, nil
-}
-
-// finalize parses URL scopes and applies defaults and bounds to the Config.
-func (c *Config) finalize() error {
-	if _, err := url.Parse(c.RootURL); err != nil {
-		return fmt.Errorf("%w: %v", errInvalidRootURL, err)
-	}
-
-	baseURL, err := url.Parse(c.RootURL)
+func NewConfigWithOptions(cfg *Config) (*Config, error) {
+	baseURL, err := url.Parse(cfg.RootURL)
 	if err != nil {
-		return fmt.Errorf("%w: %v", errInvalidRootURL, err)
+		return nil, fmt.Errorf("%w: %v", errInvalidRootURL, err)
 	}
 
-	allowedURL, err := parseURLList(c.AllowedURLs, c.RootURL, baseURL)
+	allowedURL, err := parseURLList(cfg.AllowedURLs, cfg.RootURL, baseURL)
 	if err != nil {
-		return fmt.Errorf("invalid allowed URL: %w", err)
+		return nil, fmt.Errorf("invalid allowed URL: %w", err)
 	}
 
-	excludedURL, err := parseURLList(c.ExcludedURLs, "", baseURL)
+	excludedURL, err := parseURLList(cfg.ExcludedURLs, "", baseURL)
 	if err != nil {
-		return fmt.Errorf("invalid excluded URL: %w", err)
+		return nil, fmt.Errorf("invalid excluded URL: %w", err)
 	}
 
-	c.allowedURL = allowedURL
-	c.excludedURL = excludedURL
-	c.MaxReqs = clampReqsPerSecond(c.MaxReqs)
+	cfg.allowedURL = allowedURL
+	cfg.excludedURL = excludedURL
+	cfg.MaxReqs = clampReqsPerSecond(cfg.MaxReqs)
 
 	n := runtime.NumCPU() - 1
-	if c.Workers > 0 {
-		n = c.Workers
+	if cfg.Workers > 0 {
+		n = cfg.Workers
 	}
-	c.Workers = max(minWorkers, min(maxWorkers, n))
+	cfg.Workers = max(minWorkers, min(maxWorkers, n))
 
-	if c.MaxLinks <= 0 {
-		c.MaxLinks = defaultMaxLinks
+	if cfg.MaxLinks <= 0 {
+		cfg.MaxLinks = defaultMaxLinks
 	}
-	if c.UserAgent == "" {
-		c.UserAgent = defaultUserAgent
+	if cfg.UserAgent == "" {
+		cfg.UserAgent = defaultUserAgent
 	}
-	if c.OutputFile == "" {
-		c.OutputFile = defaultOutputFileFromURL(c.RootURL)
+	if cfg.OutputFile == "" {
+		cfg.OutputFile = defaultOutputFileFromURL(cfg.RootURL)
 	}
-	c.LogFile = logPathForOutput(c.OutputFile)
+	cfg.LogFile = logPathForOutput(cfg.OutputFile)
 
-	return nil
+	return cfg, nil
 }
 
 // parseURLList parses a comma-separated list of URL prefixes, falling back to
