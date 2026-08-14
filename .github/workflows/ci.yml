@@ -32,6 +32,9 @@ jobs:
       - run: go version
       - name: Generate coverage
         run: make test
+      - name: Race detector
+        if: matrix.os == 'ubuntu-latest'
+        run: make race
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v7
