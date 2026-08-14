@@ -8,56 +8,96 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
+	_ = x[errCodeBadRequest-400]
 	_ = x[errCodeUnauthorized-401]
 	_ = x[errCodeForbidden-403]
 	_ = x[errCodeNotFound-404]
+	_ = x[errCodeMethodNotAllowed-405]
+	_ = x[errCodeNotAcceptable-406]
+	_ = x[errCodeRequestTimeout-408]
+	_ = x[errCodeConflict-409]
+	_ = x[errCodeGone-410]
+	_ = x[errCodeLengthRequired-411]
+	_ = x[errCodePayloadTooLarge-413]
+	_ = x[errCodeURITooLong-414]
+	_ = x[errCodeUnsupportedMediaType-415]
+	_ = x[errCodeRequestedRangeNotSatisfiable-416]
+	_ = x[errCodeUnprocessableEntity-422]
+	_ = x[errCodeUpgradeRequired-426]
+	_ = x[errCodePreconditionRequired-428]
 	_ = x[errCodeTooManyRequests-429]
+	_ = x[errCodeRequestHeaderFieldsTooLarge-431]
+	_ = x[errCodeUnavailableForLegalReasons-451]
 	_ = x[errCodeInternalServerError-500]
+	_ = x[errCodeNotImplemented-501]
 	_ = x[errCodeBadGateway-502]
 	_ = x[errCodeServiceUnavailable-503]
 	_ = x[errCodeGatewayTimeout-504]
+	_ = x[errCodeHTTPVersionNotSupported-505]
+	_ = x[errCodeNetworkAuthenticationRequired-511]
+	_ = x[errCodeCloudflare520-520]
+	_ = x[errCodeCloudflare521-521]
+	_ = x[errCodeCloudflare522-522]
+	_ = x[errCodeCloudflare523-523]
+	_ = x[errCodeCloudflare524-524]
+	_ = x[errCodeCloudflare525-525]
+	_ = x[errCodeCloudflare526-526]
+	_ = x[errCodeCloudflare527-527]
+	_ = x[errCodeCloudflare530-530]
 	_ = x[errCodeLinkedInDenied-999]
 	_ = x[errCodeRequestConstruction-1001]
 	_ = x[errCodeRequestFailed-1002]
 	_ = x[errCodeProcessingPanic-1003]
 }
 
-const (
-	_ErrorCode_name_0 = "Unauthorized"
-	_ErrorCode_name_1 = "ForbiddenNot Found"
-	_ErrorCode_name_2 = "Too Many Requests"
-	_ErrorCode_name_3 = "Internal Server Error"
-	_ErrorCode_name_4 = "Bad GatewayService UnavailableGateway Timeout"
-	_ErrorCode_name_5 = "LinkedIn denied the request"
-	_ErrorCode_name_6 = "building the HTTP request failedthe HTTP request could not be completedprocessing the link panicked"
-)
+const _ErrorCode_name = "Bad RequestUnauthorizedForbiddenNot FoundMethod Not AllowedNot AcceptableRequest TimeoutConflictGoneLength RequiredPayload Too LargeURI Too LongUnsupported Media TypeRange Not SatisfiableUnprocessable EntityUpgrade RequiredPrecondition RequiredToo Many RequestsRequest Header Fields Too LargeUnavailable For Legal ReasonsInternal Server ErrorNot ImplementedBad GatewayService UnavailableGateway TimeoutHTTP Version Not SupportedNetwork Authentication RequiredUnknown ErrorWeb Server Is DownConnection Timed OutOrigin Is UnreachableA Timeout OccurredSSL Handshake FailedInvalid SSL CertificateRailgun ErrorOrigin DNS ErrorLinkedIn denied the requestbuilding the HTTP request failedthe HTTP request could not be completedprocessing the link panicked"
 
-var (
-	_ErrorCode_index_1 = [...]uint8{0, 9, 18}
-	_ErrorCode_index_4 = [...]uint8{0, 11, 30, 45}
-	_ErrorCode_index_6 = [...]uint8{0, 32, 71, 99}
-)
+var _ErrorCode_map = map[ErrorCode]string{
+	400:  _ErrorCode_name[0:11],
+	401:  _ErrorCode_name[11:23],
+	403:  _ErrorCode_name[23:32],
+	404:  _ErrorCode_name[32:41],
+	405:  _ErrorCode_name[41:59],
+	406:  _ErrorCode_name[59:73],
+	408:  _ErrorCode_name[73:88],
+	409:  _ErrorCode_name[88:96],
+	410:  _ErrorCode_name[96:100],
+	411:  _ErrorCode_name[100:115],
+	413:  _ErrorCode_name[115:132],
+	414:  _ErrorCode_name[132:144],
+	415:  _ErrorCode_name[144:166],
+	416:  _ErrorCode_name[166:187],
+	422:  _ErrorCode_name[187:207],
+	426:  _ErrorCode_name[207:223],
+	428:  _ErrorCode_name[223:244],
+	429:  _ErrorCode_name[244:261],
+	431:  _ErrorCode_name[261:292],
+	451:  _ErrorCode_name[292:321],
+	500:  _ErrorCode_name[321:342],
+	501:  _ErrorCode_name[342:357],
+	502:  _ErrorCode_name[357:368],
+	503:  _ErrorCode_name[368:387],
+	504:  _ErrorCode_name[387:402],
+	505:  _ErrorCode_name[402:428],
+	511:  _ErrorCode_name[428:459],
+	520:  _ErrorCode_name[459:472],
+	521:  _ErrorCode_name[472:490],
+	522:  _ErrorCode_name[490:510],
+	523:  _ErrorCode_name[510:531],
+	524:  _ErrorCode_name[531:549],
+	525:  _ErrorCode_name[549:569],
+	526:  _ErrorCode_name[569:592],
+	527:  _ErrorCode_name[592:605],
+	530:  _ErrorCode_name[605:621],
+	999:  _ErrorCode_name[621:648],
+	1001: _ErrorCode_name[648:680],
+	1002: _ErrorCode_name[680:719],
+	1003: _ErrorCode_name[719:747],
+}
 
 func (i ErrorCode) String() string {
-	switch {
-	case i == 401:
-		return _ErrorCode_name_0
-	case 403 <= i && i <= 404:
-		i -= 403
-		return _ErrorCode_name_1[_ErrorCode_index_1[i]:_ErrorCode_index_1[i+1]]
-	case i == 429:
-		return _ErrorCode_name_2
-	case i == 500:
-		return _ErrorCode_name_3
-	case 502 <= i && i <= 504:
-		i -= 502
-		return _ErrorCode_name_4[_ErrorCode_index_4[i]:_ErrorCode_index_4[i+1]]
-	case i == 999:
-		return _ErrorCode_name_5
-	case 1001 <= i && i <= 1003:
-		i -= 1001
-		return _ErrorCode_name_6[_ErrorCode_index_6[i]:_ErrorCode_index_6[i+1]]
-	default:
-		return "ErrorCode(" + strconv.FormatInt(int64(i), 10) + ")"
+	if str, ok := _ErrorCode_map[i]; ok {
+		return str
 	}
+	return "ErrorCode(" + strconv.FormatInt(int64(i), 10) + ")"
 }
