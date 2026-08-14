@@ -173,7 +173,7 @@ func (c *Crawler) process(link Link) {
 
 	default:
 		if resp.StatusCode >= 400 {
-			c.reportError(link, resp.StatusCode, resp.Status)
+			c.reportError(link, ErrorCode(resp.StatusCode), resp.Status)
 
 			return
 		}
@@ -195,7 +195,7 @@ func (c *Crawler) process(link Link) {
 		page := NewHTMLPage(c, body, link.URL)
 		page.ExtractLinks()
 	} else if link.SourcePage == "" {
-		c.reportError(link, resp.StatusCode, "initial URL is not an HTML page")
+		c.reportError(link, ErrorCode(resp.StatusCode), "initial URL is not an HTML page")
 	}
 }
 

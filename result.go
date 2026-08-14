@@ -12,13 +12,13 @@ import (
 
 // BrokenLink holds the data written to the CSV output for each broken resource.
 type BrokenLink struct {
-	linkType   LinkType // linkType is the category of the resource pointed to by the broken link.
-	statusCode int      // statusCode is the HTTP response code for the broken link, or 0 if no response was received.
-	sourcePage string   // sourcePage is the page the broken link was found on.
-	linkName   string   // linkName is the visible link text (only for hyperlinks).
-	selector   string   // selector is a CSS-like path identifying the element's location on the page.
-	brokenURL  string   // brokenURL is the URL that was found to be broken.
-	errorMsg   string   // errorMsg is the error description when statusCode is 0.
+	linkType   LinkType  // linkType is the category of the resource pointed to by the broken link.
+	statusCode ErrorCode // statusCode is the HTTP response code for the broken link, or 0 if no response was received.
+	sourcePage string    // sourcePage is the page the broken link was found on.
+	linkName   string    // linkName is the visible link text (only for hyperlinks).
+	selector   string    // selector is a CSS-like path identifying the element's location on the page.
+	brokenURL  string    // brokenURL is the URL that was found to be broken.
+	errorMsg   string    // errorMsg is the error description when statusCode is 0.
 }
 
 // resultWriter manages the output CSV file and writes broken link records.
@@ -66,7 +66,7 @@ func newResultWriter(filename string) (*resultWriter, error) {
 
 // writeBrokenLink formats a BrokenLink and buffers it as a CSV row.
 func (rw *resultWriter) writeBrokenLink(bl BrokenLink) {
-	status := strconv.Itoa(bl.statusCode)
+	status := strconv.Itoa(int(bl.statusCode))
 
 	// Fields sourced from crawled HTML are attacker-controlled; escape
 	// spreadsheet-formula cells to prevent CSV formula injection.

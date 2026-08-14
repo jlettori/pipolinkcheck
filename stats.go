@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"sync"
 )
 
@@ -12,13 +13,13 @@ const statsRule = "============================================================"
 
 // Stats holds cumulative counters for the entire crawl.
 type Stats struct {
-	mu              sync.Mutex         // mu guards all the counters below against concurrent access.
-	resourcesByMime map[string]int64   // resourcesByMime counts visited resources per MIME type.
-	linksByType     map[LinkType]int64 // linksByType counts enqueued links per link type.
-	linksEnqueued   int64              // linksEnqueued is the total number of links enqueued.
-	errorsByType    map[LinkType]int64 // errorsByType counts broken links per link type.
-	errorsByStatus  map[int]int64      // errorsByStatus counts broken links per HTTP status code.
-	totalErrors     int64              // totalErrors is the total number of broken links found.
+	mu              sync.Mutex          // mu guards all the counters below against concurrent access.
+	resourcesByMime map[string]int64    // resourcesByMime counts visited resources per MIME type.
+	linksByType     map[LinkType]int64  // linksByType counts enqueued links per link type.
+	linksEnqueued   int64               // linksEnqueued is the total number of links enqueued.
+	errorsByType    map[LinkType]int64  // errorsByType counts broken links per link type.
+	errorsByStatus  map[ErrorCode]int64 // errorsByStatus counts broken links per HTTP status code.
+	totalErrors     int64               // totalErrors is the total number of broken links found.
 }
 
 // NewStats creates and returns a new Stats instance.
@@ -27,7 +28,7 @@ func NewStats() *Stats {
 		resourcesByMime: make(map[string]int64),
 		linksByType:     make(map[LinkType]int64),
 		errorsByType:    make(map[LinkType]int64),
-		errorsByStatus:  make(map[int]int64),
+		errorsByStatus:  make(map[ErrorCode]int64),
 	}
 }
 
@@ -50,7 +51,7 @@ func (st *Stats) RecordLink(linkType LinkType) {
 }
 
 // RecordError increments the total error count, and tracks by link type and status code.
-func (st *Stats) RecordError(linkType LinkType, statusCode int) {
+func (st *Stats) RecordError(linkType LinkType, statusCode ErrorCode) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	st.totalErrors++
@@ -83,56 +84,106 @@ func (st *Stats) Print(w io.Writer) {
 // printResourcesByMime prints the number of visited resources per MIME type.
 func printResourcesByMime(w io.Writer, resources map[string]int64) {
 	fmt.Fprintln(w, "\nVisited resources by MIME type")
-	total := printSortedCounts(w, resources)
-	fmt.Fprintf(w, "  %-34s %8d\n", "Total visited:", total)
+	total, width := printSortedCounts(w, resources)
+	fmt.Fprintf(w, "  %-*s %8d\n", labelWidth(width, "Total visited:"), "Total visited:", total)
 }
 
 // printLinksByType prints the number of enqueued links per link type.
 func printLinksByType(w io.Writer, links map[LinkType]int64) {
 	fmt.Fprintln(w, "\nLinks enqueued by type")
+	width := 0
 	total := int64(0)
 	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
-		n := links[lt]
-		if n == 0 {
-			continue
+		if n := links[lt]; n != 0 {
+			total += n
+			width = labelWidth(width, lt.String())
 		}
-		total += n
-		fmt.Fprintf(w, "  %-34s %8d\n", lt.String(), n)
 	}
-	fmt.Fprintf(w, "  %-34s %8d\n", "Total links:", total)
+	width = labelWidth(width, "Total links:")
+	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
+		if n := links[lt]; n != 0 {
+			fmt.Fprintf(w, "  %-*s %8d\n", width, lt.String(), n)
+		}
+	}
+	fmt.Fprintf(w, "  %-*s %8d\n", width, "Total links:", total)
 }
 
 // printErrors prints the breakdown of broken links by type and by status code.
-func printErrors(w io.Writer, errorsByType map[LinkType]int64, errorsByStatus map[int]int64, totalErrors int64) {
+func printErrors(w io.Writer, errorsByType map[LinkType]int64, errorsByStatus map[ErrorCode]int64, totalErrors int64) {
 	if totalErrors == 0 {
 		fmt.Fprintln(w, "\n0 broken link found.")
 		return
 	}
 
 	fmt.Fprintln(w, "\nErrors by link type")
+	width := 0
 	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
-		n := errorsByType[lt]
-		if n == 0 {
-			continue
+		if n := errorsByType[lt]; n != 0 {
+			width = labelWidth(width, lt.String())
 		}
-		fmt.Fprintf(w, "  %-34s %8d\n", lt.String(), n)
+	}
+	width = labelWidth(width, "Total errors:")
+	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
+		if n := errorsByType[lt]; n != 0 {
+			fmt.Fprintf(w, "  %-*s %8d\n", width, lt.String(), n)
+		}
 	}
 
 	fmt.Fprintln(w, "\nErrors by status code")
-	printSortedCounts(w, errorsByStatus)
+	printErrorsByStatus(w, errorsByStatus)
 
-	fmt.Fprintf(w, "\n  %-34s %8d\n", "Total errors:", totalErrors)
+	fmt.Fprintf(w, "\n  %-*s %8d\n", width, "Total errors:", totalErrors)
 }
 
-// printSortedCounts prints each non-zero counter of m sorted by its typed key K and
-// returns the total count. Callers pass K = string for MIME types or K = int for
-// HTTP status codes, so keys are compared directly without string formatting.
-func printSortedCounts[K cmp.Ordered](w io.Writer, m map[K]int64) int64 {
+// printErrorsByStatus prints the number of broken links per HTTP status code,
+// sorted by status code, with a human-readable label for each known code.
+func printErrorsByStatus(w io.Writer, errorsByStatus map[ErrorCode]int64) {
+	keys := make([]ErrorCode, 0, len(errorsByStatus))
+	for k := range errorsByStatus {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
+	width := 0
+	for _, code := range keys {
+		if errorsByStatus[code] == 0 {
+			continue
+		}
+		if label := code.String(); !strings.HasPrefix(label, "ErrorCode(") {
+			width = labelWidth(width, label)
+		}
+	}
+
+	for _, code := range keys {
+		n := errorsByStatus[code]
+		if n == 0 {
+			continue
+		}
+		label := ""
+		if l := code.String(); !strings.HasPrefix(l, "ErrorCode(") {
+			label = l
+		}
+		fmt.Fprintf(w, "  %-6d %-*s %8d\n", code, width, label, n)
+	}
+}
+
+// printSortedCounts prints each non-zero counter of m sorted by its typed key K
+// and returns the total count and the width of the widest key. Callers pass
+// K = string for MIME types, so keys are compared directly without string
+// formatting.
+func printSortedCounts[K cmp.Ordered](w io.Writer, m map[K]int64) (int64, int) {
 	keys := make([]K, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
+
+	width := 0
+	for _, k := range keys {
+		if l := len(fmt.Sprint(k)); l > width {
+			width = l
+		}
+	}
 
 	total := int64(0)
 	for _, k := range keys {
@@ -141,7 +192,18 @@ func printSortedCounts[K cmp.Ordered](w io.Writer, m map[K]int64) int64 {
 			continue
 		}
 		total += n
-		fmt.Fprintf(w, "  %-34v %8d\n", k, n)
+		fmt.Fprintf(w, "  %-*v %8d\n", width, k, n)
 	}
-	return total
+	return total, width
+}
+
+// labelWidth returns width widened as needed to accommodate the longest label,
+// so that output columns expand to fit their widest entry.
+func labelWidth(width int, labels ...string) int {
+	for _, l := range labels {
+		if len(l) > width {
+			width = len(l)
+		}
+	}
+	return width
 }

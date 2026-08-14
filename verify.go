@@ -3,7 +3,7 @@ package main
 import "net/url"
 
 // reportError sends a broken-link record to the resultCh channel.
-func (c *Crawler) reportError(link Link, statusCode int, errMsg string) {
+func (c *Crawler) reportError(link Link, statusCode ErrorCode, errMsg string) {
 	c.stats.RecordError(link.Type, statusCode)
 
 	c.resultCh <- BrokenLink{

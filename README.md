@@ -1,10 +1,10 @@
 # pipolinkcheck
 
-[![CI](https://github.com/jlettori/linkcheck/actions/workflows/ci.yml/badge.svg)](https://github.com/jlettori/linkcheck/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/jlettori/linkcheck.svg)](https://pkg.go.dev/github.com/jlettori/linkcheck)
-[![Release](https://img.shields.io/github/v/release/jlettori/linkcheck)](https://github.com/jlettori/linkcheck/releases/latest)
-[![License](https://img.shields.io/github/license/jlettori/linkcheck)](https://github.com/jlettori/linkcheck/blob/main/LICENSE)
-[![codecov](https://codecov.io/gh/jlettori/linkcheck/graph/badge.svg?token=QZ74MRHLNY)](https://codecov.io/gh/jlettori/linkcheck)
+[![CI](https://github.com/jlettori/pipolinkcheck/actions/workflows/ci.yml/badge.svg)](https://github.com/jlettori/pipolinkcheck/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jlettori/pipolinkcheck.svg)](https://pkg.go.dev/github.com/jlettori/pipolinkcheck)
+[![Release](https://img.shields.io/github/v/release/jlettori/pipolinkcheck)](https://github.com/jlettori/pipolinkcheck/releases/latest)
+[![License](https://img.shields.io/github/license/jlettori/pipolinkcheck)](https://github.com/jlettori/pipolinkcheck/blob/main/LICENSE)
+[![codecov](https://codecov.io/gh/jlettori/pipolinkcheck/graph/badge.svg?token=QZ74MRHLNY)](https://codecov.io/gh/jlettori/pipolinkcheck)
 
 A concurrent website crawler that finds and reports broken links. It follows
 `a`, `img`, `link`, `script`, `video` and `source` tags, then writes every
