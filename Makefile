@@ -1,7 +1,7 @@
 .PHONY: test fmt coverage build clean
 
 test:
-	go test -coverprofile=coverage.out ./...
+	go test -coverprofile='coverage.out' -covermode=atomic ./...
 
 fmt:
 	gofumpt -l -w .
