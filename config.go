@@ -233,7 +233,7 @@ func sanitizeFilename(s string) string {
 	safe.Grow(len(s))
 
 	for _, r := range s {
-		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '_') {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '.' && r != '_' {
 			r = '-'
 		}
 		safe.WriteRune(r)
