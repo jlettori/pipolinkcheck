@@ -21,22 +21,22 @@ Build the binary (requires **Go 1.26+**):
 go build .
 ```
 
-The resulting `./pipolinkcheck` binary is ready to use. You can also build it
+The resulting `pipolinkcheck` binary is ready to use. You can also build it
 with `make build`.
 
 ## Usage
 
 ```bash
-./pipolinkcheck [options]
+pipolinkcheck [options]
 ```
 
-Run `./pipolinkcheck` with no arguments to see the full list of options:
+Run `pipolinkcheck` with no arguments to see the full list of options:
 
 ```
-Usage: ./pipolinkcheck [options]
+Usage: pipolinkcheck [options]
 
 Options:
-  -root <url>     Root URL to start crawling from (default "https://example.com/")
+  -base <url>     Base URL to start crawling from (default "https://example.com/")
   -allowed <csv>  Comma-separated list of allowed URL prefixes
   -excluded <csv> Comma-separated list of excluded URL prefixes
   -maxreqs <n>    Maximum requests per second (default 20, clamped to 2-20)
@@ -52,9 +52,9 @@ Options:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `-root` | `https://example.com/` | URL to start crawling from |
-| `-allowed` | *root URL* | Comma-separated URL prefixes the crawler is allowed to visit; root-relative entries (e.g. `/docs`) are resolved against `-root` |
-| `-excluded` | *(none)* | Comma-separated URL prefixes to skip; root-relative entries (e.g. `/admin`) are resolved against `-root` |
+| `-base` | `https://example.com/` | URL to start crawling from |
+| `-allowed` | *root URL* | Comma-separated URL prefixes the crawler is allowed to visit; root-relative entries (e.g. `/docs`) are resolved against `-base` |
+| `-excluded` | *(none)* | Comma-separated URL prefixes to skip; root-relative entries (e.g. `/admin`) are resolved against `-base` |
 | `-maxreqs` | `20` | Maximum requests per second (automatically clamped to 2–20) |
 | `-maxlinks` | `100000` | Maximum number of unique links to crawl before discovery stops (bounds memory usage) |
 | `-workers` | `0` | Number of parallel workers (`0` auto-computes from CPU count; clamped to 2–16) |
@@ -74,7 +74,7 @@ Go program.
 Crawl a site staying within its own domain (the root host is allowed by default):
 
 ```bash
-./pipolinkcheck -root https://example.com
+pipolinkcheck -base https://example.com
 ```
 
 ### Explicitly restrict the crawl to matching prefixes
@@ -82,20 +82,20 @@ Crawl a site staying within its own domain (the root host is allowed by default)
 Only follow URLs beginning with `https://example.com/`:
 
 ```bash
-./pipolinkcheck -root https://example.com -allowed https://example.com
+pipolinkcheck -base https://example.com -allowed https://example.com
 ```
 
 Allow a site *and* all its subdomains:
 
 ```bash
-./pipolinkcheck -root https://example.com \
+pipolinkcheck -base https://example.com \
   -allowed https://example.com,https://www.example.com,https://blog.example.com
 ```
 
 Stray beyond the root host, e.g. also crawl a CDN that hosts images:
 
 ```bash
-./pipolinkcheck -root https://example.com \
+pipolinkcheck -base https://example.com \
   -allowed https://example.com,https://cdn.example.net
 ```
 
@@ -105,10 +105,10 @@ of it.
 ### Use root-relative prefixes
 
 Prefixes may be written relative to the root URL — a leading `/` is resolved
-against `-root`, so you don't have to repeat the full host:
+against `-base`, so you don't have to repeat the full host:
 
 ```bash
-./pipolinkcheck -root https://example.com \
+pipolinkcheck -base https://example.com \
   -allowed /docs,/api \
   -excluded /admin,/tmp
 ```
@@ -122,13 +122,13 @@ URLs work exactly as before.
 Skip a section you know is heavy or has thousands of stale pages:
 
 ```bash
-./pipolinkcheck -root https://example.com -excluded https://example.com/archive,https://example.com/tmp
+pipolinkcheck -base https://example.com -excluded https://example.com/archive,https://example.com/tmp
 ```
 
 Allowed and excluded prefixes can be combined — excluded wins over allowed:
 
 ```bash
-./pipolinkcheck -root https://example.com \
+pipolinkcheck -base https://example.com \
   -allowed https://example.com,https://cdn.example.net \
   -excluded https://example.com/admin,https://cdn.example.net/private
 ```
@@ -139,13 +139,13 @@ Slow things down to be polite to the server / avoid rate limiting (clamped to a
 minimum of 2):
 
 ```bash
-./pipolinkcheck -root https://example.com -maxreqs 2
+pipolinkcheck -base https://example.com -maxreqs 2
 ```
 
 Speed up for a large site:
 
 ```bash
-./pipolinkcheck -root https://example.com -maxreqs 20
+pipolinkcheck -base https://example.com -maxreqs 20
 ```
 
 The value is automatically clamped to the 2–20 range, so out-of-range values
@@ -157,7 +157,7 @@ To keep memory usage bounded on very large sites, the crawler stops discovering
 new links once it has queued `-maxlinks` unique URLs (100000 by default):
 
 ```bash
-./pipolinkcheck -root https://example.com -maxlinks 50000
+pipolinkcheck -base https://example.com -maxlinks 50000
 ```
 
 Pass a larger value (or rely on the default) for extensive sites.
@@ -165,7 +165,7 @@ Pass a larger value (or rely on the default) for extensive sites.
 ### Choose the output file
 
 ```bash
-./pipolinkcheck -root https://example.com -output /tmp/broken-links.csv
+pipolinkcheck -base https://example.com -output /tmp/broken-links.csv
 ```
 
 If `-output` is omitted, a filename is derived from the URL
@@ -175,20 +175,20 @@ stats log (`pipolinkcheck-www.example.com.log`).
 ### Use a custom User-Agent
 
 ```bash
-./pipolinkcheck -root https://example.com \
+pipolinkcheck -base https://example.com \
   -user-agent "Acme-SiteAudit/2.5 (+https://acme.example)"
 ```
 
 ### Silence verbose per-URL logging
 
 ```bash
-./pipolinkcheck -root https://example.com -verbose=false
+pipolinkcheck -base https://example.com -verbose=false
 ```
 
 ### Crawl a site with a self-signed certificate
 
 ```bash
-./pipolinkcheck -root https://intranet.local -insecure-tls
+pipolinkcheck -base https://intranet.local -insecure-tls
 ```
 
 > **Security note:** only use `-insecure-tls` for internal sites with
@@ -197,8 +197,8 @@ stats log (`pipolinkcheck-www.example.com.log`).
 ### A full example combining options
 
 ```bash
-./pipolinkcheck \
-  -root https://www.example.com \
+pipolinkcheck \
+  -base https://www.example.com \
   -allowed https://www.example.com,https://static.example.com \
   -excluded https://www.example.com/account,https://www.example.com/api \
   -maxreqs 8 \
@@ -223,7 +223,7 @@ A semicolon-delimited (`;`) CSV with the following columns:
 | `Selector` | A short CSS-like path locating the element on the page, built from elements with an `id`/`class` and structural landmarks (e.g. `main#contents > section.block > p > a`). Boilerplate (`html`, `head`, `body`) and nested anonymous wrappers are dropped, and the path is capped in length |
 | `Broken Link` | The URL that failed |
 | `Status Code` | HTTP status returned (e.g. `404`), or one of the internal codes below when the link fails before an HTTP response |
-| `Error message` | Textual error when no status code is available (e.g. DNS, TLS, timeout) |
+| `Error message` | Human-readable description of the failure — the standard status description for HTTP errors (e.g. `Not Found`), or the textual error for internal failures (e.g. DNS, TLS, timeout) |
 
 Internal error codes written to the `Status Code` column when a request fails
 before any HTTP response is received:
@@ -238,9 +238,9 @@ Example report:
 
 ```csv
 Link Type;Source Page;Link Name;Selector;Broken Link;Status Code;Error message
-hyperlink;https://www.example.com/;;main#contents > section.block > p > a;https://www.example.com/old-page.html;404;
-image;https://www.example.com/;banner;header > div.logo > img;https://www.example.com/img/banner.png;500;
-hyperlink;https://www.example.com/contact;read more;footer > ul.footer-links > li > a;https://www.example.com/privacy;404;
+hyperlink;https://www.example.com/;;main#contents > section.block > p > a;https://www.example.com/old-page.html;404;Not Found
+image;https://www.example.com/;banner;header > div.logo > img;https://www.example.com/img/banner.png;500;Internal Server Error
+hyperlink;https://www.example.com/contact;read more;footer > ul.footer-links > li > a;https://www.example.com/privacy;404;Not Found
 ```
 
 The file is written with a UTF-8 BOM so it opens correctly in Excel/LibreOffice.
@@ -254,9 +254,15 @@ by type, and a breakdown of broken links by type and HTTP status code.
 ## Development
 
 ```bash
-make test      # run tests
+make test      # run tests with coverage profile
+make race      # run tests with the race detector enabled
 make fmt       # format code (requires gofumpt)
 make coverage  # generate coverage report
 make build     # build binary
 make clean     # remove build artifacts
 ```
+
+The project includes unit tests for the crawler, config, result writer,
+stats, HTTP layer, HTML parsing, and verification helpers. CI runs the test
+suite (with coverage uploaded to Codecov) and the race detector on Linux, and
+builds binaries for Linux, macOS, and Windows.

@@ -16,7 +16,7 @@ import (
 
 const (
 	appPrefix        = "pipolinkcheck"                                  // appPrefix is the application name, used in default filenames.
-	defaultRootURL   = "https://example.com/"                           // defaultRootURL is the root URL used when none is provided.
+	defaultBaseURL   = "https://example.com/"                           // defaultBaseURL is the base URL used when none is provided.
 	defaultUserAgent = "Mozilla/5.0 (compatible; PipoLinkCheckBot/1.0)" // defaultUserAgent is sent with every HTTP request.
 	linkQueueSize    = 10000                                            // linkQueueSize is the buffered size of the discovered-link channel.
 	resultsQueueSize = 100                                              // resultsQueueSize is the buffered size of the broken-link channel.
@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	errInvalidRootURL = fmt.Errorf("invalid root URL")
+	errInvalidBaseURL = fmt.Errorf("invalid base URL")
 )
 
 var tagMap = map[string]struct {
@@ -54,7 +54,7 @@ var tagMap = map[string]struct {
 
 // Config holds all user-configurable settings for the crawl.
 type Config struct {
-	RootURL      string // RootURL is the starting URL of the crawl.
+	BaseURL      string // BaseURL is the starting URL of the crawl.
 	AllowedURLs  string // AllowedURLs is a comma-separated list of allowed URL prefixes.
 	ExcludedURLs string // ExcludedURLs is a comma-separated list of excluded URL prefixes.
 	UserAgent    string // UserAgent is sent with every HTTP request.
@@ -93,7 +93,7 @@ func newFlagSet(cfg *Config) *flag.FlagSet {
 		fs.PrintDefaults()
 	}
 
-	fs.StringVar(&cfg.RootURL, "root", defaultRootURL, "Root URL to start crawling from")
+	fs.StringVar(&cfg.BaseURL, "base", defaultBaseURL, "Base URL to start crawling from")
 	fs.StringVar(&cfg.AllowedURLs, "allowed", "", "Comma-separated list of allowed URL prefixes")
 	fs.StringVar(&cfg.ExcludedURLs, "excluded", "", "Comma-separated list of excluded URL prefixes")
 	fs.IntVar(&cfg.MaxReqs, "maxreqs", maxReqsPerSecond, "Maximum requests per second")
@@ -114,12 +114,12 @@ func printUsage() {
 
 // NewConfigWithOptions creates and returns a new Config initialized with the provided values.
 func NewConfigWithOptions(cfg *Config) (*Config, error) {
-	baseURL, err := url.Parse(cfg.RootURL)
+	baseURL, err := url.Parse(cfg.BaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", errInvalidRootURL, err)
+		return nil, fmt.Errorf("%w: %v", errInvalidBaseURL, err)
 	}
 
-	allowedURL, err := parseURLList(cfg.AllowedURLs, cfg.RootURL, baseURL)
+	allowedURL, err := parseURLList(cfg.AllowedURLs, cfg.BaseURL, baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid allowed URL: %w", err)
 	}
@@ -146,7 +146,7 @@ func NewConfigWithOptions(cfg *Config) (*Config, error) {
 		cfg.UserAgent = defaultUserAgent
 	}
 	if cfg.OutputFile == "" {
-		cfg.OutputFile = defaultOutputFileFromURL(cfg.RootURL)
+		cfg.OutputFile = defaultOutputFileFromURL(cfg.BaseURL)
 	}
 	cfg.LogFile = logPathForOutput(cfg.OutputFile)
 
@@ -157,7 +157,7 @@ func NewConfigWithOptions(cfg *Config) (*Config, error) {
 // def when rawList is empty. It parses and validates each entry up front so the
 // crawl never reparses them, and normalises hosts to lowercase so look-alike
 // casing can never leak into the stored scopes. Entries that are relative to
-// the root (e.g. "/test") are resolved against baseURL so they become absolute
+// the base (e.g. "/test") are resolved against baseURL so they become absolute
 // prefixes.
 func parseURLList(rawList, def string, baseURL *url.URL) ([]url.URL, error) {
 	rawList = strings.TrimSpace(rawList)

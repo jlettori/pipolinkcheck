@@ -32,7 +32,7 @@ func TestGetAttr(t *testing.T) {
 
 func TestResolveURL(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -114,7 +114,7 @@ func TestExtractLinks(t *testing.T) {
 	</body></html>`
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     "https://example.com",
+		BaseURL:     "https://example.com",
 		AllowedURLs: "https://example.com",
 		OutputFile:  t.TempDir() + "/test.csv",
 	})
@@ -183,7 +183,7 @@ func TestExtractLinksAnchorNameFromContent(t *testing.T) {
 	</body></html>`
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     "https://example.com",
+		BaseURL:     "https://example.com",
 		AllowedURLs: "https://example.com",
 		OutputFile:  t.TempDir() + "/test.csv",
 	})
@@ -237,7 +237,7 @@ func TestExtractLinksSelector(t *testing.T) {
 	</body></html>`
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -281,7 +281,7 @@ func TestExtractLinksSelectorBoundsLengthAndClasses(t *testing.T) {
 	</div></body></html>`
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -329,7 +329,7 @@ func TestExtractLinksSelectorFullDepth(t *testing.T) {
 	b.WriteString(`</body></html>`)
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -366,7 +366,7 @@ done:
 
 func TestExtractLinkWithSource(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -403,7 +403,7 @@ func TestExtractLinkWithSource(t *testing.T) {
 func TestExtractLinkMissingAttr(t *testing.T) {
 	base, _ := url.Parse("https://example.com/")
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -462,7 +462,7 @@ func TestExtractLinksSelfClosingAndVoidElements(t *testing.T) {
 	</body></html>`
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -496,7 +496,7 @@ func TestExtractLinksNestedAnchorSkipped(t *testing.T) {
 	htmlContent := `<html><body><a href="/outer">Outer <a href="/inner">inner</a> text</a></body></html>`
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {

@@ -4,7 +4,7 @@ import "testing"
 
 func TestIsAllowed(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     "https://example.com",
+		BaseURL:     "https://example.com",
 		AllowedURLs: "https://example.com,https://sub.example.com",
 		OutputFile:  t.TempDir() + "/test.csv",
 	})
@@ -32,7 +32,7 @@ func TestIsAllowed(t *testing.T) {
 
 func TestIsAllowedWithExcluded(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:      "https://example.com",
+		BaseURL:      "https://example.com",
 		AllowedURLs:  "https://example.com",
 		ExcludedURLs: "https://example.com/excluded",
 		OutputFile:   t.TempDir() + "/test.csv",
@@ -61,7 +61,7 @@ func TestIsAllowedWithExcluded(t *testing.T) {
 
 func TestIsAllowedRejectsLookAlikeHost(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:      "https://example.com/guide/",
+		BaseURL:      "https://example.com/guide/",
 		AllowedURLs:  "https://example.com/guide/",
 		ExcludedURLs: "https://example.com/guide/private/",
 		OutputFile:   t.TempDir() + "/test.csv",
@@ -94,7 +94,7 @@ func TestIsAllowedRejectsLookAlikeHost(t *testing.T) {
 
 func TestReportError(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {

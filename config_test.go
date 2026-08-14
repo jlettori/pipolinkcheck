@@ -20,11 +20,11 @@ func TestNewConfigDefaults(t *testing.T) {
 		t.Fatalf("NewConfig() unexpected error: %v", err)
 	}
 
-	if cfg.RootURL != defaultRootURL {
-		t.Errorf("RootURL = %q; want %q", cfg.RootURL, defaultRootURL)
+	if cfg.BaseURL != defaultBaseURL {
+		t.Errorf("BaseURL = %q; want %q", cfg.BaseURL, defaultBaseURL)
 	}
-	if len(cfg.allowedURL) != 1 || cfg.allowedURL[0].String() != defaultRootURL {
-		t.Errorf("AllowedPrefix = %v; want [%q]", cfg.allowedURL, defaultRootURL)
+	if len(cfg.allowedURL) != 1 || cfg.allowedURL[0].String() != defaultBaseURL {
+		t.Errorf("AllowedPrefix = %v; want [%q]", cfg.allowedURL, defaultBaseURL)
 	}
 	if cfg.MaxReqs != maxReqsPerSecond {
 		t.Errorf("RateLimit = %d; want %d", cfg.MaxReqs, maxReqsPerSecond)
@@ -48,7 +48,7 @@ func TestNewConfigCustom(t *testing.T) {
 
 	os.Args = []string{
 		"linkcheck",
-		"-root", "https://example.com",
+		"-base", "https://example.com",
 		"-allowed", "https://example.com,https://sub.example.com",
 		"-maxreqs", "20",
 		"-user-agent", "MyBot/1.0",
@@ -60,8 +60,8 @@ func TestNewConfigCustom(t *testing.T) {
 		t.Fatalf("NewConfig() unexpected error: %v", err)
 	}
 
-	if cfg.RootURL != "https://example.com" {
-		t.Errorf("RootURL = %q; want %q", cfg.RootURL, "https://example.com")
+	if cfg.BaseURL != "https://example.com" {
+		t.Errorf("BaseURL = %q; want %q", cfg.BaseURL, "https://example.com")
 	}
 	wantAllowed := []string{"https://example.com", "https://sub.example.com"}
 	if len(cfg.allowedURL) != len(wantAllowed) {
@@ -91,18 +91,18 @@ func TestNewConfigAllowedDefaultIsRoot(t *testing.T) {
 	saveArgs := os.Args
 	defer func() { os.Args = saveArgs }()
 
-	os.Args = []string{"linkcheck", "-root", "https://custom-root.com"}
+	os.Args = []string{"linkcheck", "-base", "https://custom-base.com"}
 
 	cfg, err := NewConfig()
 	if err != nil {
 		t.Fatalf("NewConfig() unexpected error: %v", err)
 	}
 
-	if cfg.RootURL != "https://custom-root.com" {
-		t.Errorf("RootURL = %q; want %q", cfg.RootURL, "https://custom-root.com")
+	if cfg.BaseURL != "https://custom-base.com" {
+		t.Errorf("BaseURL = %q; want %q", cfg.BaseURL, "https://custom-base.com")
 	}
-	if len(cfg.allowedURL) != 1 || cfg.allowedURL[0].String() != "https://custom-root.com" {
-		t.Errorf("AllowedPrefix = %v; want [%q]", cfg.allowedURL, "https://custom-root.com")
+	if len(cfg.allowedURL) != 1 || cfg.allowedURL[0].String() != "https://custom-base.com" {
+		t.Errorf("AllowedPrefix = %v; want [%q]", cfg.allowedURL, "https://custom-base.com")
 	}
 }
 
@@ -132,7 +132,7 @@ func TestNewConfigFlagParseError(t *testing.T) {
 
 func TestNewConfigWithOptionsInvalidExcludedURL(t *testing.T) {
 	opts := &Config{
-		RootURL:      "https://example.com",
+		BaseURL:      "https://example.com",
 		ExcludedURLs: "://invalid",
 	}
 	_, err := NewConfigWithOptions(opts)
@@ -143,7 +143,7 @@ func TestNewConfigWithOptionsInvalidExcludedURL(t *testing.T) {
 
 func TestNewConfigWithOptionsEmptyUserAgentDefaults(t *testing.T) {
 	opts := &Config{
-		RootURL: "https://example.com",
+		BaseURL: "https://example.com",
 	}
 	cfg, err := NewConfigWithOptions(opts)
 	if err != nil {
@@ -156,7 +156,7 @@ func TestNewConfigWithOptionsEmptyUserAgentDefaults(t *testing.T) {
 
 func TestNewConfigWithOptionsEmptyOutputFileDefaults(t *testing.T) {
 	opts := &Config{
-		RootURL: "https://example.com",
+		BaseURL: "https://example.com",
 	}
 	cfg, err := NewConfigWithOptions(opts)
 	if err != nil {
@@ -170,7 +170,7 @@ func TestNewConfigWithOptionsEmptyOutputFileDefaults(t *testing.T) {
 
 func TestNewConfigWithOptionsMaxReqsZero(t *testing.T) {
 	opts := &Config{
-		RootURL: "https://example.com",
+		BaseURL: "https://example.com",
 		MaxReqs: 0,
 	}
 	cfg, err := NewConfigWithOptions(opts)
@@ -184,7 +184,7 @@ func TestNewConfigWithOptionsMaxReqsZero(t *testing.T) {
 
 func TestNewConfigWithOptionsExcludedURL(t *testing.T) {
 	opts := &Config{
-		RootURL:      "https://example.com",
+		BaseURL:      "https://example.com",
 		ExcludedURLs: "https://example.com/excluded",
 	}
 	cfg, err := NewConfigWithOptions(opts)
@@ -198,7 +198,7 @@ func TestNewConfigWithOptionsExcludedURL(t *testing.T) {
 
 func TestNewConfigWithOptionsRelativeURLsResolvedToRoot(t *testing.T) {
 	opts := &Config{
-		RootURL:      "https://example.com/",
+		BaseURL:      "https://example.com/",
 		AllowedURLs:  "/test,/api",
 		ExcludedURLs: "/private",
 	}
@@ -222,19 +222,19 @@ func TestNewConfigWithOptionsRelativeURLsResolvedToRoot(t *testing.T) {
 	}
 }
 
-func TestNewConfigWithOptionsInvalidRootURL(t *testing.T) {
+func TestNewConfigWithOptionsInvalidBaseURL(t *testing.T) {
 	opts := &Config{
-		RootURL: "://invalid",
+		BaseURL: "://invalid",
 	}
 	_, err := NewConfigWithOptions(opts)
-	if !errors.Is(err, errInvalidRootURL) {
-		t.Errorf("expected %v, got %v", errInvalidRootURL, err)
+	if !errors.Is(err, errInvalidBaseURL) {
+		t.Errorf("expected %v, got %v", errInvalidBaseURL, err)
 	}
 }
 
 func TestNewConfigWithOptionsStoredHostsLowercase(t *testing.T) {
 	opts := &Config{
-		RootURL:      "https://WWW.FRANCETRAVAIL.FR/Region/Corse/",
+		BaseURL:      "https://WWW.FRANCETRAVAIL.FR/Region/Corse/",
 		AllowedURLs:  "https://WWW.FRANCETRAVAIL.FR,https://Sub.Example.com",
 		ExcludedURLs: "https://Sub.Example.com/Prive",
 	}
@@ -257,7 +257,7 @@ func TestNewConfigWithOptionsStoredHostsLowercase(t *testing.T) {
 
 func TestNewConfigWithOptionsInvalidAllowedURL(t *testing.T) {
 	opts := &Config{
-		RootURL:     "https://example.com",
+		BaseURL:     "https://example.com",
 		AllowedURLs: "://bad",
 	}
 	_, err := NewConfigWithOptions(opts)
@@ -266,14 +266,14 @@ func TestNewConfigWithOptionsInvalidAllowedURL(t *testing.T) {
 	}
 }
 
-func TestNewConfigInvalidRootURL(t *testing.T) {
+func TestNewConfigInvalidBaseURL(t *testing.T) {
 	saveArgs := os.Args
 	defer func() { os.Args = saveArgs }()
 
-	os.Args = []string{"linkcheck", "-root", "://invalid"}
+	os.Args = []string{"linkcheck", "-base", "://invalid"}
 	_, err := NewConfig()
 	if err == nil {
-		t.Fatal("NewConfig() expected error for invalid root URL, got nil")
+		t.Fatal("NewConfig() expected error for invalid base URL, got nil")
 	}
 }
 
@@ -296,8 +296,8 @@ func TestPrintUsage(t *testing.T) {
 	if !strings.Contains(buf.String(), "Usage:") {
 		t.Errorf("usage output missing 'Usage:', got %q", buf.String())
 	}
-	if !strings.Contains(buf.String(), "-root") {
-		t.Errorf("usage output missing '-root' flag, got %q", buf.String())
+	if !strings.Contains(buf.String(), "-base") {
+		t.Errorf("usage output missing '-base' flag, got %q", buf.String())
 	}
 }
 
@@ -324,7 +324,7 @@ func TestDefaultOutputFileFromURLInvalid(t *testing.T) {
 
 func TestNewConfigWithOptionsMaxLinksZeroDefaults(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:  "https://example.com",
+		BaseURL:  "https://example.com",
 		MaxLinks: 0,
 	})
 	if err != nil {

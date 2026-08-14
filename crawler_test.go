@@ -24,7 +24,7 @@ func mustNewCrawler(t *testing.T, cfg *Config) *Crawler {
 
 func TestNewCrawler(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     "https://example.com",
+		BaseURL:     "https://example.com",
 		AllowedURLs: "https://example.com",
 		MaxReqs:     10,
 		Workers:     5,
@@ -37,8 +37,8 @@ func TestNewCrawler(t *testing.T) {
 	c := mustNewCrawler(t, cfg)
 	defer c.Close()
 
-	if c.cfg.RootURL != cfg.RootURL {
-		t.Errorf("RootURL = %q; want %q", c.cfg.RootURL, cfg.RootURL)
+	if c.cfg.BaseURL != cfg.BaseURL {
+		t.Errorf("BaseURL = %q; want %q", c.cfg.BaseURL, cfg.BaseURL)
 	}
 	if c.cfg.Workers != cfg.Workers {
 		t.Errorf("Workers = %d; want %d", c.cfg.Workers, cfg.Workers)
@@ -67,7 +67,7 @@ func TestProcess_404(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    server.URL,
+		BaseURL:    server.URL,
 		UserAgent:  "test",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
@@ -100,7 +100,7 @@ func TestProcess_200HTML(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL,
+		BaseURL:     server.URL,
 		AllowedURLs: server.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -126,7 +126,7 @@ func TestProcess_NonHTML(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL,
+		BaseURL:     server.URL,
 		AllowedURLs: server.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -157,7 +157,7 @@ func TestProcessVerbose(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL,
+		BaseURL:     server.URL,
 		AllowedURLs: server.URL,
 		UserAgent:   "test",
 		Verbose:     true,
@@ -183,7 +183,7 @@ func TestProcessExcluded(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:      server.URL,
+		BaseURL:      server.URL,
 		AllowedURLs:  server.URL,
 		ExcludedURLs: server.URL + "/excluded",
 		UserAgent:    "test",
@@ -215,7 +215,7 @@ func TestProcessNonHTMLInitial(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL,
+		BaseURL:     server.URL,
 		AllowedURLs: server.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -249,7 +249,7 @@ func TestProcessNonHyperlink(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL,
+		BaseURL:     server.URL,
 		AllowedURLs: server.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -288,7 +288,7 @@ func TestProcessNonHyperlink_headMethodNotAllowedFallsBackToGET(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL,
+		BaseURL:     server.URL,
 		AllowedURLs: server.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -322,7 +322,7 @@ func TestProcessNonHyperlinkBroken(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL,
+		BaseURL:     server.URL,
 		AllowedURLs: server.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -347,7 +347,7 @@ func TestProcessNonHyperlinkBroken(t *testing.T) {
 
 func TestCrawlerClose(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     "https://example.com",
+		BaseURL:     "https://example.com",
 		AllowedURLs: "https://example.com",
 		MaxReqs:     10,
 		Workers:     2,
@@ -375,7 +375,7 @@ func TestRun(t *testing.T) {
 
 	outputFile := t.TempDir() + "/test_output.csv"
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL + "/",
+		BaseURL:     server.URL + "/",
 		AllowedURLs: server.URL,
 		MaxReqs:     1000,
 		Workers:     2,
@@ -414,7 +414,7 @@ func TestRunWithBrokenLinks(t *testing.T) {
 
 	outputFile := t.TempDir() + "/test_output.csv"
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL + "/",
+		BaseURL:     server.URL + "/",
 		AllowedURLs: server.URL,
 		MaxReqs:     1000,
 		Workers:     2,
@@ -459,7 +459,7 @@ func TestProcessLinkOutsideAllowedStillChecked(t *testing.T) {
 	defer site.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     site.URL,
+		BaseURL:     site.URL,
 		AllowedURLs: site.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -501,7 +501,7 @@ func TestProcessLinkOutsideAllowedNotCrawled(t *testing.T) {
 	defer site.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     site.URL,
+		BaseURL:     site.URL,
 		AllowedURLs: site.URL,
 		UserAgent:   "test",
 		OutputFile:  t.TempDir() + "/test.csv",
@@ -543,7 +543,7 @@ func TestSanitizeLog(t *testing.T) {
 
 func TestAtLinkLimit(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		MaxLinks:   1,
 		OutputFile: t.TempDir() + "/test.csv",
 	})
@@ -601,7 +601,7 @@ func TestProcessTooManyRequestsDecreasesRate(t *testing.T) {
 	defer server.Close()
 
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    server.URL,
+		BaseURL:    server.URL,
 		UserAgent:  "test",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
@@ -736,7 +736,7 @@ func TestProcessHeadFallbackGETFails(t *testing.T) {
 
 func TestEnqueueLinkDeduplicates(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {
@@ -762,7 +762,7 @@ func TestEnqueueLinkDeduplicates(t *testing.T) {
 
 func TestEnqueueLinkStopsAtLimit(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		MaxLinks:   1,
 		OutputFile: t.TempDir() + "/test.csv",
 	})
@@ -795,7 +795,7 @@ func TestRunWithUnwritableLogFile(t *testing.T) {
 
 	outputFile := t.TempDir() + "/test_output.csv"
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:     server.URL + "/",
+		BaseURL:     server.URL + "/",
 		AllowedURLs: server.URL,
 		MaxReqs:     1000,
 		Workers:     2,
@@ -820,7 +820,7 @@ func TestRunWithUnwritableLogFile(t *testing.T) {
 
 func TestCrawlerCloseWithResultWriterError(t *testing.T) {
 	cfg, err := NewConfigWithOptions(&Config{
-		RootURL:    "https://example.com",
+		BaseURL:    "https://example.com",
 		OutputFile: t.TempDir() + "/test.csv",
 	})
 	if err != nil {

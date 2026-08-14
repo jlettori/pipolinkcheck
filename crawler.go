@@ -77,8 +77,8 @@ func (c *Crawler) Run() {
 		go c.worker()
 	}
 
-	log.Printf("Starting crawl on %s...", c.cfg.RootURL)
-	c.enqueueLink(Link{SourcePage: "", URL: c.cfg.RootURL, Type: LinkTypeHyperlink})
+	log.Printf("Starting crawl on %s...", c.cfg.BaseURL)
+	c.enqueueLink(Link{SourcePage: "", URL: c.cfg.BaseURL, Type: LinkTypeHyperlink})
 	c.wg.Wait()
 	close(c.linkCh)
 	close(c.resultCh)
