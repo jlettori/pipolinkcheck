@@ -173,7 +173,7 @@ func (c *Crawler) process(link Link) {
 
 	default:
 		if resp.StatusCode >= 400 {
-			c.reportError(link, ErrorCode(resp.StatusCode), resp.Status)
+			c.reportError(link, ErrorCode(resp.StatusCode), statusMessage(ErrorCode(resp.StatusCode)))
 
 			return
 		}
@@ -197,6 +197,19 @@ func (c *Crawler) process(link Link) {
 	} else if link.SourcePage == "" {
 		c.reportError(link, ErrorCode(resp.StatusCode), "initial URL is not an HTML page")
 	}
+}
+
+// statusMessage returns a human-readable description for an error code. Defined
+// codes use their ErrorCode label; any other real HTTP status falls back to the
+// standard reason phrase so an undefined code never surfaces as "ErrorCode(N)".
+func statusMessage(code ErrorCode) string {
+	if label := code.String(); !strings.HasPrefix(label, "ErrorCode(") {
+		return label
+	}
+	if text := http.StatusText(int(code)); text != "" {
+		return text
+	}
+	return fmt.Sprintf("HTTP status %d", code)
 }
 
 // mimeType returns the MIME type of a Content-Type header, dropping any
