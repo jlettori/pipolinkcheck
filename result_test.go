@@ -350,6 +350,7 @@ func TestSanitizeCSVCellSafeValuesUntouched(t *testing.T) {
 }
 
 func readCSV(path string) ([][]string, error) {
+	// #nosec G304 -- test helper reading back a CSV it just wrote.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

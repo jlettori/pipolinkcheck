@@ -32,6 +32,7 @@ type resultWriter struct {
 
 // newResultWriter opens the CSV file, writes the header, and returns a resultWriter.
 func newResultWriter(filename string) (*resultWriter, error) {
+	// #nosec G304 -- CLI tool: the output file path comes from the user's own command line.
 	file, err := os.Create(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CSV file: %w", err)

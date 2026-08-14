@@ -1,3 +1,6 @@
+// Package main implements pipolinkcheck, a command-line link checker that
+// crawls a site, validates its hyperlinks and assets, and reports broken links
+// to a CSV file.
 package main
 
 import (

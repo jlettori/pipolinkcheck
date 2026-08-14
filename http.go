@@ -109,6 +109,7 @@ func (c *Crawler) do(link Link, method string) *http.Response {
 		if maxDelay > backoffMax {
 			maxDelay = backoffMax
 		}
+		// #nosec G404 -- backoff jitter is not security-sensitive; math/rand/v2 is fine.
 		time.Sleep(time.Duration(rand.Int64N(int64(maxDelay))))
 	}
 
