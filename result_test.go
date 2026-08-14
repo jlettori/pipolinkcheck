@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -12,6 +13,19 @@ func TestNewResultWriterError(t *testing.T) {
 	_, err := newResultWriter(t.TempDir() + "/no/such/dir/out.csv")
 	if err == nil {
 		t.Fatal("expected error from newResultWriter with invalid output path, got nil")
+	}
+}
+
+func TestNewResultWriterWriteError(t *testing.T) {
+	// /dev/full is a device whose every write fails with ENOSPC, exercising
+	// the BOM-write error cleanup in newResultWriter. Skipped on platforms
+	// that do not provide it.
+	if _, err := os.Stat("/dev/full"); err != nil {
+		t.Skip("/dev/full not available; cannot simulate write errors")
+	}
+	_, err := newResultWriter("/dev/full")
+	if err == nil {
+		t.Fatal("expected error writing to /dev/full, got nil")
 	}
 }
 
@@ -346,6 +360,46 @@ func TestSanitizeCSVCellSafeValuesUntouched(t *testing.T) {
 		if got := sanitizeCSVCell(s); got != s {
 			t.Errorf("sanitizeCSVCell(%q) = %q; want unchanged", s, got)
 		}
+	}
+}
+
+func TestWriteBrokenLinkAfterErrorIsIgnored(t *testing.T) {
+	rw, err := newResultWriter(t.TempDir() + "/test.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Once the writer has hit a storage error, further writes must be no-ops
+	// rather than panicking or corrupting output.
+	rw.mu.Lock()
+	rw.err = errors.New("boom")
+	rw.mu.Unlock()
+
+	rw.writeBrokenLink(BrokenLink{brokenURL: "https://example.com/broken", statusCode: 404})
+
+	if err := rw.Close(); err == nil {
+		t.Error("Close() = nil; want the stored storage error")
+	}
+}
+
+func TestErrAfterStorageFailure(t *testing.T) {
+	rw, err := newResultWriter(t.TempDir() + "/test.csv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rw.mu.Lock()
+	rw.err = errors.New("boom")
+	rw.mu.Unlock()
+
+	if err := rw.Err(); err == nil {
+		t.Error("Err() = nil; want the stored storage error")
+	}
+	rw.Close()
+}
+
+func TestSanitizeCSVCellTrimsLeadingWhitespace(t *testing.T) {
+	if got := sanitizeCSVCell("  \t\r\n"); got != "" {
+		t.Errorf("sanitizeCSVCell(whitespace) = %q; want empty", got)
 	}
 }
 

@@ -430,3 +430,87 @@ func TestExtractLinkMissingAttr(t *testing.T) {
 		t.Error("expected nil for img without src")
 	}
 }
+
+func TestNewHTMLPageInvalidSourceURL(t *testing.T) {
+	p := NewHTMLPage(nil, strings.NewReader(`<a href="/x">x</a>`), "://invalid")
+	if p.baseURL != nil {
+		t.Error("expected nil baseURL for an invalid source URL")
+	}
+	// With no base URL, link extraction must be a safe no-op.
+	p.ExtractLinks()
+}
+
+func TestElemSelectorString(t *testing.T) {
+	if got := (elemSelector{}).String(); got != "" {
+		t.Errorf("empty selector String() = %q; want empty", got)
+	}
+	if got := (elemSelector{tag: "a", id: "#main", class: ".btn.active"}).String(); got != "a#main.btn.active" {
+		t.Errorf("full selector String() = %q; want %q", got, "a#main.btn.active")
+	}
+	if got := (elemSelector{tag: "li", class: ".item"}).String(); got != "li.item" {
+		t.Errorf("selector without id String() = %q; want %q", got, "li.item")
+	}
+}
+
+func TestExtractLinksSelfClosingAndVoidElements(t *testing.T) {
+	htmlContent := `<html><body>
+		<img src="/s.png" />
+		<a href="/l">Link</a>
+		<br />
+		<input type="hidden">
+		<meta charset="utf-8">
+	</body></html>`
+
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:    "https://example.com",
+		OutputFile: t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+
+	NewHTMLPage(c, strings.NewReader(htmlContent), "https://example.com/").ExtractLinks()
+
+	for _, u := range []string{"https://example.com/s.png", "https://example.com/l"} {
+		if _, ok := c.visited.Load(u); !ok {
+			t.Errorf("expected %q to be visited", u)
+		}
+	}
+
+	// br, input and meta are not link elements and must not be enqueued.
+	count := 0
+	c.visited.Range(func(_, _ interface{}) bool {
+		count++
+		return true
+	})
+	if count != 2 {
+		t.Errorf("expected 2 visited URLs, got %d", count)
+	}
+}
+
+func TestExtractLinksNestedAnchorSkipped(t *testing.T) {
+	// Nested <a> inside an outer <a> is invalid HTML; the inner anchor must be
+	// skipped so it does not clobber the pending outer anchor's link text.
+	htmlContent := `<html><body><a href="/outer">Outer <a href="/inner">inner</a> text</a></body></html>`
+
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:    "https://example.com",
+		OutputFile: t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+
+	NewHTMLPage(c, strings.NewReader(htmlContent), "https://example.com/").ExtractLinks()
+
+	if _, ok := c.visited.Load("https://example.com/inner"); ok {
+		t.Error("nested anchor should not be enqueued")
+	}
+	if _, ok := c.visited.Load("https://example.com/outer"); !ok {
+		t.Error("outer anchor should be enqueued")
+	}
+}

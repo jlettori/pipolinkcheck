@@ -115,7 +115,7 @@ func shortTimeoutClient(timeout time.Duration) *http.Client {
 
 func TestDoRetriesOnTimeoutThenSucceeds(t *testing.T) {
 	var calls atomic.Int64
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if calls.Add(1) == 1 {
 			// Simulate a slow server: exceed the client timeout on the first try.
 			time.Sleep(2 * time.Second)

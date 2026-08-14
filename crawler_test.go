@@ -1,9 +1,13 @@
 package main
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 )
@@ -521,4 +525,323 @@ func TestProcessLinkOutsideAllowedNotCrawled(t *testing.T) {
 	if mimeCount != 1 {
 		t.Errorf("expected the fetched external page to be recorded as visited text/html, got %d", mimeCount)
 	}
+}
+
+func TestSanitizeLog(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"", ""},
+		{"plain text", "plain text"},
+		{"a\rb\nc\td\x00e", "a_b_c_d_e"},
+		{"tab\there", "tab_here"},
+	}
+	for _, tt := range tests {
+		if got := sanitizeLog(tt.in); got != tt.want {
+			t.Errorf("sanitizeLog(%q) = %q; want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestAtLinkLimit(t *testing.T) {
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:    "https://example.com",
+		MaxLinks:   1,
+		OutputFile: t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+
+	if c.atLinkLimit() {
+		t.Fatal("atLinkLimit() = true before reaching the limit")
+	}
+	if c.capLogged.Load() {
+		t.Error("capLogged should not be set before reaching the limit")
+	}
+
+	c.visitedCount.Add(1)
+	if !c.atLinkLimit() {
+		t.Error("atLinkLimit() = false after reaching the limit")
+	}
+	if !c.capLogged.Load() {
+		t.Error("capLogged should be set once the limit is reached")
+	}
+	if !c.atLinkLimit() {
+		t.Error("atLinkLimit() = false when still at the limit")
+	}
+}
+
+func TestSafeProcessRecoversPanic(t *testing.T) {
+	c := &Crawler{
+		cfg:      nil, // process() dereferences c.cfg.Verbose, forcing a panic.
+		stats:    NewStats(),
+		resultCh: make(chan BrokenLink, 1),
+	}
+
+	c.safeProcess(Link{URL: "https://example.com/", Type: LinkTypeHyperlink})
+
+	select {
+	case res := <-c.resultCh:
+		if res.statusCode != errCodeProcessingPanic {
+			t.Errorf("statusCode = %d; want %d", res.statusCode, errCodeProcessingPanic)
+		}
+		if res.errorMsg == "" {
+			t.Error("expected a non-empty error message describing the panic")
+		}
+	default:
+		t.Error("expected a broken-link result after panic recovery")
+	}
+}
+
+func TestProcessTooManyRequestsDecreasesRate(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer server.Close()
+
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:    server.URL,
+		UserAgent:  "test",
+		OutputFile: t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Build the crawler manually so the auto-increase goroutine is not started,
+	// keeping the rate assertions deterministic.
+	c := &Crawler{
+		cfg:        cfg,
+		httpClient: &http.Client{},
+		rateLimiter: &RateLimiter{
+			rate:        maxReqsPerSecond,
+			initialRate: maxReqsPerSecond,
+			stopCh:      make(chan struct{}),
+		},
+		stats:    NewStats(),
+		resultCh: make(chan BrokenLink, 1),
+		visited:  sync.Map{},
+	}
+
+	c.process(Link{URL: server.URL, Type: LinkTypeHyperlink})
+
+	if got := c.rateLimiter.rate; got != maxReqsPerSecond-1 {
+		t.Errorf("rate after 429 = %d; want %d", got, maxReqsPerSecond-1)
+	}
+}
+
+func TestMimeType(t *testing.T) {
+	c := &Crawler{}
+	tests := []struct{ in, want string }{
+		{"text/html", "text/html"},
+		{"text/html; charset=utf-8", "text/html"},
+		{"  application/json ; charset=utf-8 ", "application/json"},
+		{"", ""},
+	}
+	for _, tt := range tests {
+		if got := c.mimeType(tt.in); got != tt.want {
+			t.Errorf("mimeType(%q) = %q; want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestStatusMessage(t *testing.T) {
+	tests := []struct {
+		code ErrorCode
+		want string
+	}{
+		{ErrorCode(http.StatusNotFound), "Not Found"},
+		{errCodeNotFound, "Not Found"},
+		{ErrorCode(http.StatusTeapot), "I'm a teapot"},
+		{ErrorCode(9999), "HTTP status 9999"},
+	}
+	for _, tt := range tests {
+		if got := statusMessage(tt.code); got != tt.want {
+			t.Errorf("statusMessage(%d) = %q; want %q", tt.code, got, tt.want)
+		}
+	}
+}
+
+func TestProcessRequestConstructionFails(t *testing.T) {
+	// A URL that http.NewRequest rejects makes do() report the construction
+	// error and return nil, so process() must bail out without crashing.
+	c := &Crawler{
+		cfg:        &Config{UserAgent: "test"},
+		httpClient: &http.Client{},
+		stats:      NewStats(),
+		resultCh:   make(chan BrokenLink, 1),
+	}
+
+	c.process(Link{URL: "http://[::1", Type: LinkTypeHyperlink})
+
+	select {
+	case res := <-c.resultCh:
+		if res.statusCode != errCodeRequestConstruction {
+			t.Errorf("statusCode = %d; want %d", res.statusCode, errCodeRequestConstruction)
+		}
+	default:
+		t.Error("expected a broken-link result for the request construction error")
+	}
+}
+
+// headThenGETFails is a RoundTripper that answers HEAD with 405 and fails GET,
+// exercising the "HEAD unsupported, GET fallback also fails" branch of process.
+type headThenGETFails struct {
+	head, get atomic.Int32
+}
+
+func (t *headThenGETFails) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Method == "HEAD" {
+		t.head.Add(1)
+		return &http.Response{
+			StatusCode: http.StatusMethodNotAllowed,
+			Status:     "405 Method Not Allowed",
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader("")),
+			Request:    req,
+		}, nil
+	}
+	t.get.Add(1)
+	return nil, errors.New("get failed")
+}
+
+func TestProcessHeadFallbackGETFails(t *testing.T) {
+	transport := &headThenGETFails{}
+	c := &Crawler{
+		cfg:        &Config{UserAgent: "test"},
+		httpClient: &http.Client{Transport: transport},
+		stats:      NewStats(),
+		resultCh:   make(chan BrokenLink, 2),
+	}
+
+	c.process(Link{URL: "https://example.com/img.png", Type: LinkTypeImage})
+
+	if transport.head.Load() != 1 {
+		t.Errorf("HEAD requests = %d; want 1", transport.head.Load())
+	}
+	if transport.get.Load() != 1 {
+		t.Errorf("GET fallback requests = %d; want 1", transport.get.Load())
+	}
+
+	select {
+	case res := <-c.resultCh:
+		if res.statusCode != errCodeRequestFailed {
+			t.Errorf("statusCode = %d; want %d", res.statusCode, errCodeRequestFailed)
+		}
+	default:
+		t.Error("expected a broken-link result when the GET fallback also fails")
+	}
+}
+
+func TestEnqueueLinkDeduplicates(t *testing.T) {
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:    "https://example.com",
+		OutputFile: t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+
+	l := Link{URL: "https://example.com/page", Type: LinkTypeHyperlink}
+	c.enqueueLink(l)
+	c.enqueueLink(l)
+
+	if got := c.visitedCount.Load(); got != 1 {
+		t.Errorf("visitedCount = %d; want 1 (duplicate must not be re-enqueued)", got)
+	}
+	<-c.linkCh
+	select {
+	case <-c.linkCh:
+		t.Error("expected only one link on the channel")
+	default:
+	}
+}
+
+func TestEnqueueLinkStopsAtLimit(t *testing.T) {
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:    "https://example.com",
+		MaxLinks:   1,
+		OutputFile: t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+
+	c.enqueueLink(Link{URL: "https://example.com/one", Type: LinkTypeHyperlink})
+	c.enqueueLink(Link{URL: "https://example.com/two", Type: LinkTypeHyperlink})
+
+	if got := c.visitedCount.Load(); got != 1 {
+		t.Errorf("visitedCount = %d; want 1 (second link must be dropped at the limit)", got)
+	}
+	<-c.linkCh
+	select {
+	case <-c.linkCh:
+		t.Error("expected only one link on the channel")
+	default:
+	}
+}
+
+func TestRunWithUnwritableLogFile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`<a href="/page1">Page 1</a>`))
+	}))
+	defer server.Close()
+
+	outputFile := t.TempDir() + "/test_output.csv"
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:     server.URL + "/",
+		AllowedURLs: server.URL,
+		MaxReqs:     1000,
+		Workers:     2,
+		UserAgent:   "test",
+		OutputFile:  outputFile,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Point the stats log at an unwritable location so Run falls back to
+	// printing the summary on stdout.
+	cfg.LogFile = t.TempDir() + "/no/such/dir/stats.log"
+
+	c := mustNewCrawler(t, cfg)
+	c.Run()
+	c.Close()
+
+	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
+		t.Error("output CSV should still be written even when the stats log fails")
+	}
+}
+
+func TestCrawlerCloseWithResultWriterError(t *testing.T) {
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:    "https://example.com",
+		OutputFile: t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rw, err := newResultWriter(cfg.OutputFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c := &Crawler{
+		cfg:         cfg,
+		rateLimiter: NewRateLimiter(cfg.MaxReqs),
+		httpClient:  newHTTPClient(cfg.allowedURL, cfg.excludedURL, cfg.InsecureTLS),
+		resultW:     rw,
+		stats:       NewStats(),
+	}
+
+	rw.mu.Lock()
+	rw.err = errors.New("boom")
+	rw.mu.Unlock()
+
+	c.Close()
 }

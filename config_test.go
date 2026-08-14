@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"runtime"
@@ -273,5 +274,63 @@ func TestNewConfigInvalidRootURL(t *testing.T) {
 	_, err := NewConfig()
 	if err == nil {
 		t.Fatal("NewConfig() expected error for invalid root URL, got nil")
+	}
+}
+
+func TestPrintUsage(t *testing.T) {
+	saveStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = w
+	defer func() { os.Stderr = saveStderr }()
+
+	printUsage()
+	w.Close()
+
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "Usage:") {
+		t.Errorf("usage output missing 'Usage:', got %q", buf.String())
+	}
+	if !strings.Contains(buf.String(), "-root") {
+		t.Errorf("usage output missing '-root' flag, got %q", buf.String())
+	}
+}
+
+func TestLogPathForOutput(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"out.csv", "out.log"},
+		{"out.txt", "out.log"},
+		{"path/to/result.CSV", "path/to/result.log"},
+		{"out", "out.log"},
+		{"", ".log"},
+	}
+	for _, tt := range tests {
+		if got := logPathForOutput(tt.in); got != tt.want {
+			t.Errorf("logPathForOutput(%q) = %q; want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestDefaultOutputFileFromURLInvalid(t *testing.T) {
+	if got := defaultOutputFileFromURL("://invalid"); got != "" {
+		t.Errorf("defaultOutputFileFromURL(invalid) = %q; want empty", got)
+	}
+}
+
+func TestNewConfigWithOptionsMaxLinksZeroDefaults(t *testing.T) {
+	cfg, err := NewConfigWithOptions(&Config{
+		RootURL:  "https://example.com",
+		MaxLinks: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxLinks != defaultMaxLinks {
+		t.Errorf("MaxLinks = %d; want default %d", cfg.MaxLinks, defaultMaxLinks)
 	}
 }
