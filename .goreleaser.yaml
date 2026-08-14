@@ -13,16 +13,12 @@ builds:
     goos:
       - linux
       - darwin
-      - linux
       - windows
     goarch:
       - amd64
       - arm64
     binary: >-
       {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
-
-archives:
-  - format: binary
 
 checksum:
   name_template: 'checksums.txt'
