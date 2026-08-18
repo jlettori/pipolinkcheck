@@ -242,6 +242,38 @@ func TestWriteBrokenLinkMultiple(t *testing.T) {
 	}
 }
 
+func TestWriteBrokenLinkStripsNewlinesFromCells(t *testing.T) {
+	path := t.TempDir() + "/test_output.csv"
+	rw, err := newResultWriter(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bl := BrokenLink{
+		sourcePage: "https://example.com/page\n",
+		linkType:   LinkTypeHyperlink,
+		brokenURL:  "https://example.com/broken",
+		linkName:   "UTPF (Union des Transports Publics et Ferroviaires)\r\n\nUTPF",
+		statusCode: 404,
+	}
+	rw.writeBrokenLink(bl)
+	rw.Close()
+
+	records, err := readCSV(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(records))
+	}
+	if got := records[1][2]; got != "UTPF (Union des Transports Publics et Ferroviaires)UTPF" {
+		t.Errorf("LinkName = %q; want single line", got)
+	}
+	if got := records[1][1]; got != "https://example.com/page" {
+		t.Errorf("SourcePage = %q; want newline stripped", got)
+	}
+}
+
 func TestWriteBrokenLinkWithLinkName(t *testing.T) {
 	path := t.TempDir() + "/test_output.csv"
 	rw, err := newResultWriter(path)
@@ -397,9 +429,19 @@ func TestErrAfterStorageFailure(t *testing.T) {
 	rw.Close()
 }
 
-func TestSanitizeCSVCellTrimsLeadingWhitespace(t *testing.T) {
-	if got := sanitizeCSVCell("  \t\r\n"); got != "" {
-		t.Errorf("sanitizeCSVCell(whitespace) = %q; want empty", got)
+func TestSanitizeCSVCellNormalizesWhitespace(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"foo\r\nbar", "foobar"},
+		{"foo\rbar", "foobar"},
+		{"foo\nbar", "foobar"},
+		{"foo\tbar", "foo bar"},
+		{"  \t\r\n", "   "}, // newlines removed, tab becomes a space, spaces kept
+		{"\r\n", ""},
+	}
+	for _, tt := range tests {
+		if got := sanitizeCSVCell(tt.in); got != tt.want {
+			t.Errorf("sanitizeCSVCell(%q) = %q; want %q", tt.in, got, tt.want)
+		}
 	}
 }
 

@@ -92,15 +92,10 @@ func (rw *resultWriter) writeBrokenLink(bl BrokenLink) {
 }
 
 // sanitizeCSVCell neutralises spreadsheet formula injection by prefixing cells
-// that begin with a formula character (= + - @) or line-start whitespace (> \t \r).
-// Leading whitespace before a formula character is also caught, since many
-// spreadsheet engines strip it before evaluating the rest as a formula.
+// that begin with a formula character (= + - @). CR/LF is removed so every
+// field stays on a single line, and tabs are replaced with spaces.
 func sanitizeCSVCell(s string) string {
-	if s == "" {
-		return ""
-	}
-
-	s = strings.TrimLeft(s, " \t\r\n")
+	s = strings.NewReplacer("\r\n", "", "\r", "", "\n", "", "\t", " ").Replace(s)
 	if s == "" {
 		return ""
 	}
