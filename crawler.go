@@ -116,14 +116,24 @@ func sanitizeLog(s string) string {
 	}, s)
 }
 
-// worker is the main loop of a crawl goroutine: it consumes links and signals
-// completion with Done, matching the Add recorded when the link was enqueued.
+// worker is the main loop of a crawl goroutine: it consumes links and spawns a
+// processing goroutine for each, so the worker immediately returns to draining
+// linkCh. Processing enqueues newly discovered links on the same channel, so
+// when the buffer is full the processing goroutines block on send while the
+// worker pool keeps receiving; processing inline could instead leave every
+// worker blocked on a send with a full buffer and no receiver left to drain it.
 func (c *Crawler) worker() {
 	for link := range c.linkCh {
 		c.rateLimiter.Wait()
-		c.safeProcess(link)
-		c.wg.Done()
+		go c.processAndDone(link)
 	}
+}
+
+// processAndDone runs safeProcess for a link and accounts for its completion.
+// Each link is counted by enqueueLink with wg.Add(1), balanced by the Done here.
+func (c *Crawler) processAndDone(link Link) {
+	defer c.wg.Done()
+	c.safeProcess(link)
 }
 
 // safeProcess runs process, converting any panic into a recorded broken-link

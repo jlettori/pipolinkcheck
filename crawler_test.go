@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // mustNewCrawler creates a Crawler for tests, failing the test if construction fails.
@@ -1002,5 +1004,49 @@ func TestReportError(t *testing.T) {
 		}
 	default:
 		t.Error("expected a result on the channel")
+	}
+}
+
+func TestRunCompletesWithFullWorkQueue(t *testing.T) {
+	// Regression test for a producer/consumer deadlock: workers both consume
+	// and produce on linkCh. With a tiny buffer and several workers, processing
+	// each link inline can leave every worker blocked on a send with a full
+	// buffer and no receiver left to drain it. Processing each link in its own
+	// goroutine keeps a receiver always draining.
+	const paths = 4
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		var b strings.Builder
+		for i := 0; i < paths; i++ {
+			fmt.Fprintf(&b, `<a href="/p%d">Page %d</a>`, i, i)
+		}
+		w.Write([]byte(b.String()))
+	}))
+	defer server.Close()
+
+	cfg, err := NewConfigWithOptions(&Config{
+		BaseURL:     server.URL + "/",
+		AllowedURLs: server.URL,
+		MaxReqs:     maxReqsPerSecond,
+		Workers:     2,
+		UserAgent:   "test",
+		OutputFile:  t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+	c.linkCh = make(chan Link, 2) // small buffer forces send contention
+
+	done := make(chan struct{})
+	go func() {
+		c.Run()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("Run deadlocked with a full link queue")
 	}
 }
