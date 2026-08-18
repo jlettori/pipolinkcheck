@@ -351,15 +351,26 @@ func TestWriteBrokenLinkCSVFormulaInjection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	injected := []string{"=cmd|'/C calc'!A0", "+SUM(A1:A9)", "@SUM(A1:A9)", "-2+3", "\t=1+1", " =1+1", "  @SUM(A1)"}
-	for _, payload := range injected {
+	injected := []struct {
+		payload string
+		want    string
+	}{
+		{"=cmd|'/C calc'!A0", "'=cmd|'/C calc'!A0"},
+		{"+SUM(A1:A9)", "'+SUM(A1:A9)"},
+		{"@SUM(A1:A9)", "'@SUM(A1:A9)"},
+		{"-2+3", "'-2+3"},
+		{"\t=1+1", "' =1+1"},
+		{" =1+1", "' =1+1"},
+		{"  @SUM(A1)", "'  @SUM(A1)"},
+	}
+	for _, tt := range injected {
 		bl := BrokenLink{
-			sourcePage: payload,
-			linkName:   payload,
-			selector:   payload,
-			brokenURL:  payload,
+			sourcePage: tt.payload,
+			linkName:   tt.payload,
+			selector:   tt.payload,
+			brokenURL:  tt.payload,
 			statusCode: 0,
-			errorMsg:   payload,
+			errorMsg:   tt.payload,
 		}
 		rw.writeBrokenLink(bl)
 	}
@@ -372,15 +383,14 @@ func TestWriteBrokenLinkCSVFormulaInjection(t *testing.T) {
 	if len(records) != len(injected)+1 {
 		t.Fatalf("expected %d rows, got %d", len(injected)+1, len(records))
 	}
-	for i, payload := range injected {
-		want := sanitizeCSVCell(payload)
+	for i, tt := range injected {
 		for col := 1; col <= 6; col++ {
 			if col == 5 { // Status Code column is never user-controlled
 				continue
 			}
 			got := records[i+1][col]
-			if got != want {
-				t.Errorf("row %d col %d = %q; want formula-neutralised %q", i+1, col, got, want)
+			if got != tt.want {
+				t.Errorf("row %d col %d = %q; want formula-neutralised %q", i+1, col, got, tt.want)
 			}
 		}
 	}
