@@ -11,6 +11,11 @@ import (
 
 const statsRule = "============================================================"
 
+// linkTypes is the complete set of LinkType values in declaration order. The
+// stats output iterates it wherever the whole enum must be covered, so adding a
+// new link type only requires extending this list.
+var linkTypes = []LinkType{LinkTypeHyperlink, LinkTypeImage, LinkTypeCSS, LinkTypeScript, LinkTypeVideo}
+
 // Stats holds cumulative counters for the entire crawl.
 type Stats struct {
 	mu              sync.Mutex          // mu guards all the counters below against concurrent access.
@@ -93,14 +98,14 @@ func printLinksByType(w io.Writer, links map[LinkType]int64) {
 	fmt.Fprintln(w, "\nLinks enqueued by type")
 	width := 0
 	total := int64(0)
-	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
+	for _, lt := range linkTypes {
 		if n := links[lt]; n != 0 {
 			total += n
 			width = labelWidth(width, lt.String())
 		}
 	}
 	width = labelWidth(width, "Total links:")
-	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
+	for _, lt := range linkTypes {
 		if n := links[lt]; n != 0 {
 			fmt.Fprintf(w, "  %-*s %8d\n", width, lt.String(), n)
 		}
@@ -117,13 +122,13 @@ func printErrors(w io.Writer, errorsByType map[LinkType]int64, errorsByStatus ma
 
 	fmt.Fprintln(w, "\nErrors by link type")
 	width := 0
-	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
+	for _, lt := range linkTypes {
 		if n := errorsByType[lt]; n != 0 {
 			width = labelWidth(width, lt.String())
 		}
 	}
 	width = labelWidth(width, "Total errors:")
-	for lt := LinkType(0); lt <= LinkTypeVideo; lt++ {
+	for _, lt := range linkTypes {
 		if n := errorsByType[lt]; n != 0 {
 			fmt.Fprintf(w, "  %-*s %8d\n", width, lt.String(), n)
 		}
