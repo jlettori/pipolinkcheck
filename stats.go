@@ -96,21 +96,31 @@ func printResourcesByMime(w io.Writer, resources map[string]int64) {
 // printLinksByType prints the number of enqueued links per link type.
 func printLinksByType(w io.Writer, links map[LinkType]int64) {
 	fmt.Fprintln(w, "\nLinks enqueued by type")
+	printLinkTypeCounts(w, links, "Total links:")
+}
+
+// printLinkTypeCounts prints each non-zero count in counts as a row aligned to
+// the widest label, followed by the totalLabel row. It returns the total count
+// and the column width used.
+func printLinkTypeCounts(w io.Writer, counts map[LinkType]int64, totalLabel string) (int64, int) {
 	width := 0
-	total := int64(0)
 	for _, lt := range linkTypes {
-		if n := links[lt]; n != 0 {
-			total += n
+		if counts[lt] != 0 {
 			width = labelWidth(width, lt.String())
 		}
 	}
-	width = labelWidth(width, "Total links:")
+	width = labelWidth(width, totalLabel)
+
+	total := int64(0)
 	for _, lt := range linkTypes {
-		if n := links[lt]; n != 0 {
+		if n := counts[lt]; n != 0 {
+			total += n
 			fmt.Fprintf(w, "  %-*s %8d\n", width, lt.String(), n)
 		}
 	}
-	fmt.Fprintf(w, "  %-*s %8d\n", width, "Total links:", total)
+	fmt.Fprintf(w, "  %-*s %8d\n", width, totalLabel, total)
+
+	return total, width
 }
 
 // printErrors prints the breakdown of broken links by type and by status code.
@@ -121,18 +131,7 @@ func printErrors(w io.Writer, errorsByType map[LinkType]int64, errorsByStatus ma
 	}
 
 	fmt.Fprintln(w, "\nErrors by link type")
-	width := 0
-	for _, lt := range linkTypes {
-		if n := errorsByType[lt]; n != 0 {
-			width = labelWidth(width, lt.String())
-		}
-	}
-	width = labelWidth(width, "Total errors:")
-	for _, lt := range linkTypes {
-		if n := errorsByType[lt]; n != 0 {
-			fmt.Fprintf(w, "  %-*s %8d\n", width, lt.String(), n)
-		}
-	}
+	_, width := printLinkTypeCounts(w, errorsByType, "Total errors:")
 
 	fmt.Fprintln(w, "\nErrors by status code")
 	printErrorsByStatus(w, errorsByStatus)
