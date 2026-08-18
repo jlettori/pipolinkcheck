@@ -83,17 +83,20 @@ func pathHasPrefix(path, prefix string) bool {
 // do sends a single request for the link, reporting any failure via reportError.
 // It returns nil when the request could not be built or performed.
 func (c *Crawler) do(link Link, method string) *http.Response {
-	req, err := http.NewRequest(method, link.URL, nil)
-	if err != nil {
-		c.reportError(link, errCodeRequestConstruction, err.Error())
-
-		return nil
-	}
-
-	req.Header.Set("User-Agent", c.cfg.UserAgent)
-
 	var resp *http.Response
+	var err error
+
 	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Build a fresh request per attempt: an http.Request must not be
+		// reused across client.Do calls.
+		req, reqErr := http.NewRequest(method, link.URL, nil)
+		if reqErr != nil {
+			c.reportError(link, errCodeRequestConstruction, reqErr.Error())
+
+			return nil
+		}
+		req.Header.Set("User-Agent", c.cfg.UserAgent)
+
 		if resp, err = c.httpClient.Do(req); err == nil {
 			return resp
 		}
