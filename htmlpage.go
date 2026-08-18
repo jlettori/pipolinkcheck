@@ -11,9 +11,9 @@ import (
 // HTMLPage stores the body of a downloaded HTML page along with the context
 // needed to tokenise it and turn the discovered references into absolute URLs.
 type HTMLPage struct {
-	c       *Crawler  // c provides link enqueueing and crawl scope.
-	body    io.Reader // body is the HTML source to tokenise.
-	baseURL *url.URL  // baseURL resolves relative URLs found in the page.
+	c       *Crawler  // provides link enqueueing and crawl scope.
+	body    io.Reader // HTML source to tokenise.
+	baseURL *url.URL  // resolves relative URLs found in the page.
 }
 
 // NewHTMLPage builds an HTMLPage from the given body and source URL. The base
@@ -30,9 +30,9 @@ func NewHTMLPage(c *Crawler, body io.Reader, sourceURL string) *HTMLPage {
 // elemSelector is the CSS-like fragment of a single element used to build a
 // context path: its tag name plus any id and class attributes.
 type elemSelector struct {
-	tag   string // tag is the element's tag name.
-	id    string // id is the element's id attribute.
-	class string // class is the element's class attribute(s), dotted-prefixed.
+	tag   string // element's tag name.
+	id    string // element's id attribute.
+	class string // element's class attribute(s), dotted-prefixed.
 }
 
 // String renders the selector fragment, e.g. "a", "li#item", "div.card.active".

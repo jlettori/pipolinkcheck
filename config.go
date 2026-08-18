@@ -54,21 +54,21 @@ var tagMap = map[string]struct {
 
 // Config holds all user-configurable settings for the crawl.
 type Config struct {
-	BaseURL      string // BaseURL is the starting URL of the crawl.
-	AllowedURLs  string // AllowedURLs is a comma-separated list of allowed URL prefixes.
-	ExcludedURLs string // ExcludedURLs is a comma-separated list of excluded URL prefixes.
-	UserAgent    string // UserAgent is sent with every HTTP request.
-	MaxReqs      int    // MaxReqs is the maximum requests per second.
-	Workers      int    // Workers is the number of parallel workers (0 for auto-compute).
-	MaxLinks     int    // MaxLinks bounds the number of unique links crawled.
-	OutputFile   string // OutputFile is the path of the output CSV file.
-	LogFile      string // LogFile is the path of the stats log file.
-	Verbose      bool   // Verbose enables detailed logging output.
-	InsecureTLS  bool   // InsecureTLS skips TLS certificate verification.
-	NoExternal   bool   // NoExternal skips checking links outside the allowed prefixes.
+	BaseURL      string // starting URL of the crawl.
+	AllowedURLs  string // comma-separated list of allowed URL prefixes.
+	ExcludedURLs string // comma-separated list of excluded URL prefixes.
+	UserAgent    string // sent with every HTTP request.
+	MaxReqs      int    // maximum requests per second.
+	Workers      int    // number of parallel workers (0 for auto-compute).
+	MaxLinks     int    // bounds the number of unique links crawled.
+	OutputFile   string // path of the output CSV file.
+	LogFile      string // path of the stats log file.
+	Verbose      bool   // enables detailed logging output.
+	InsecureTLS  bool   // skips TLS certificate verification.
+	NoExternal   bool   // skips checking links outside the allowed prefixes.
 
-	allowedURL  []url.URL // allowedURL holds the parsed allowed URL prefixes.
-	excludedURL []url.URL // excludedURL holds the parsed excluded URL prefixes.
+	allowedURL  []url.URL // parsed allowed URL prefixes.
+	excludedURL []url.URL // parsed excluded URL prefixes.
 }
 
 // NewConfig parses command-line flags and returns a populated Config.

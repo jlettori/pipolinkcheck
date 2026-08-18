@@ -9,10 +9,10 @@ import (
 // enforced globally across all callers. The rate can be adjusted at runtime via
 // Increase or Decrease.
 type RateLimiter struct {
-	mu          sync.Mutex // mu guards rate, initialRate, nextAllowed, and stopped.
-	rate        int        // rate is the current maximum requests per second.
-	initialRate int        // initialRate is the ceiling the rate recovers to after a Decrease.
-	nextAllowed time.Time  // nextAllowed is the earliest time the next request may fire.
+	mu          sync.Mutex // guards rate, initialRate, nextAllowed, and stopped.
+	rate        int        // current maximum requests per second.
+	initialRate int        // ceiling the rate recovers to after a Decrease.
+	nextAllowed time.Time  // earliest time the next request may fire.
 	stopCh      chan struct{}
 	stopped     bool
 }

@@ -12,22 +12,22 @@ import (
 
 // BrokenLink holds the data written to the CSV output for each broken resource.
 type BrokenLink struct {
-	linkType   LinkType  // linkType is the category of the resource pointed to by the broken link.
-	statusCode ErrorCode // statusCode is the HTTP response code for the broken link, or 0 if no response was received.
-	sourcePage string    // sourcePage is the page the broken link was found on.
-	linkName   string    // linkName is the visible link text (only for hyperlinks).
-	selector   string    // selector is a CSS-like path identifying the element's location on the page.
-	brokenURL  string    // brokenURL is the URL that was found to be broken.
-	errorMsg   string    // errorMsg is the error description when statusCode is 0.
+	linkType   LinkType  // category of the resource pointed to by the broken link.
+	statusCode ErrorCode // HTTP response code for the broken link, or 0 if no response was received.
+	sourcePage string    // page the broken link was found on.
+	linkName   string    // visible link text (only for hyperlinks).
+	selector   string    // CSS-like path identifying the element's location on the page.
+	brokenURL  string    // URL that was found to be broken.
+	errorMsg   string    // error description when statusCode is 0.
 }
 
 // resultWriter manages the output CSV file and writes broken link records.
 type resultWriter struct {
-	file   *os.File      // file is the underlying output CSV file.
-	writer *csv.Writer   // writer writes CSV rows to file.
-	mu     sync.Mutex    // mu guards writer and err against concurrent access.
-	done   chan struct{} // done closes to stop the periodic flush goroutine.
-	err    error         // err holds the first write/flush/close error encountered.
+	file   *os.File      // underlying output CSV file.
+	writer *csv.Writer   // writes CSV rows to file.
+	mu     sync.Mutex    // guards writer and err against concurrent access.
+	done   chan struct{} // closes to stop the periodic flush goroutine.
+	err    error         // first write/flush/close error encountered.
 }
 
 // newResultWriter opens the CSV file, writes the header, and returns a resultWriter.

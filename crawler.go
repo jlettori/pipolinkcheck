@@ -15,28 +15,28 @@ import (
 
 // Crawler manages the state, concurrency, and rate limiting of the crawl.
 type Crawler struct {
-	cfg         *Config       // cfg holds the crawl configuration.
-	httpClient  *http.Client  // httpClient performs HTTP requests with scope and TLS settings applied.
-	rateLimiter *RateLimiter  // rateLimiter throttles requests to the configured rate.
-	resultW     *resultWriter // resultW writes broken-link records to the CSV output.
-	stats       *Stats        // stats accumulates crawl counters.
+	cfg         *Config       // holds the crawl configuration.
+	httpClient  *http.Client  // performs HTTP requests with scope and TLS settings applied.
+	rateLimiter *RateLimiter  // throttles requests to the configured rate.
+	resultW     *resultWriter // writes broken-link records to the CSV output.
+	stats       *Stats        // accumulates crawl counters.
 
-	visited      sync.Map        // visited tracks URLs that have already been enqueued.
-	visitedCount atomic.Int64    // visitedCount is the number of unique links enqueued.
-	capLogged    atomic.Bool     // capLogged records whether the link limit warning was logged.
-	wg           sync.WaitGroup  // wg tracks in-flight worker link processing.
-	consumerWg   sync.WaitGroup  // consumerWg tracks the result consumer goroutine.
-	linkCh       chan Link       // linkCh delivers discovered links to workers.
-	resultCh     chan BrokenLink // resultCh delivers broken links to the consumer.
+	visited      sync.Map        // tracks URLs that have already been enqueued.
+	visitedCount atomic.Int64    // number of unique links enqueued.
+	capLogged    atomic.Bool     // records whether the link limit warning was logged.
+	wg           sync.WaitGroup  // tracks in-flight link processing.
+	consumerWg   sync.WaitGroup  // tracks the result consumer goroutine.
+	linkCh       chan Link       // delivers discovered links to workers.
+	resultCh     chan BrokenLink // delivers broken links to the consumer.
 }
 
 // Link represents a discovered URL and its context within the crawled site.
 type Link struct {
-	SourcePage string   // SourcePage is the URL of the page where this link was found.
-	URL        string   // URL is the resolved absolute URL.
-	Type       LinkType // Type is the category of the resource.
-	LinkName   string   // LinkName is the visible link text (only for hyperlinks).
-	Selector   string   // Selector is a CSS-like path identifying the element's location on the page.
+	SourcePage string   // URL of the page where this link was found.
+	URL        string   // resolved absolute URL.
+	Type       LinkType // category of the resource.
+	LinkName   string   // visible link text (only for hyperlinks).
+	Selector   string   // CSS-like path identifying the element's location on the page.
 }
 
 // NewCrawler creates a fully initialised Crawler from a Config, writing broken

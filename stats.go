@@ -18,13 +18,13 @@ var linkTypes = []LinkType{LinkTypeHyperlink, LinkTypeImage, LinkTypeCSS, LinkTy
 
 // Stats holds cumulative counters for the entire crawl.
 type Stats struct {
-	mu              sync.Mutex          // mu guards all the counters below against concurrent access.
-	resourcesByMime map[string]int64    // resourcesByMime counts visited resources per MIME type.
-	linksByType     map[LinkType]int64  // linksByType counts enqueued links per link type.
-	linksEnqueued   int64               // linksEnqueued is the total number of links enqueued.
-	errorsByType    map[LinkType]int64  // errorsByType counts broken links per link type.
-	errorsByStatus  map[ErrorCode]int64 // errorsByStatus counts broken links per HTTP status code.
-	totalErrors     int64               // totalErrors is the total number of broken links found.
+	mu              sync.Mutex          // guards all the counters below against concurrent access.
+	resourcesByMime map[string]int64    // visited resources per MIME type.
+	linksByType     map[LinkType]int64  // enqueued links per link type.
+	linksEnqueued   int64               // total number of links enqueued.
+	errorsByType    map[LinkType]int64  // broken links per link type.
+	errorsByStatus  map[ErrorCode]int64 // broken links per HTTP status code.
+	totalErrors     int64               // total number of broken links found.
 }
 
 // NewStats creates and returns a new Stats instance.
