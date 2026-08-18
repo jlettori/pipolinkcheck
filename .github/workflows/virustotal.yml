@@ -2,7 +2,7 @@ name: VirusTotal
 
 on:
   release:
-    types: [published]
+    types: [released, published]
 
 permissions:
   contents: write
