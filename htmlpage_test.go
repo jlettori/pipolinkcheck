@@ -77,8 +77,10 @@ func TestResolveURL(t *testing.T) {
 func TestResolveURLWithParentheses(t *testing.T) {
 	base, _ := url.Parse("https://example.com/")
 
-	if got := (&HTMLPage{baseURL: base}).resolveURL("https://example.com/(parens)"); got != "" {
-		t.Errorf("resolveURL with parentheses should return empty, got %q", got)
+	// Parentheses are legal in URL paths (e.g. Wikipedia articles); the scheme
+	// check is the only filter, so such URLs must be preserved.
+	if got := (&HTMLPage{baseURL: base}).resolveURL("https://example.com/(parens)"); got != "https://example.com/(parens)" {
+		t.Errorf("resolveURL with parentheses = %q; want %q", got, "https://example.com/(parens)")
 	}
 }
 

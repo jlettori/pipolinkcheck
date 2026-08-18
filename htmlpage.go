@@ -225,13 +225,9 @@ func (p *HTMLPage) resolveURL(raw string) string {
 
 	// Only http/https (and relative URLs, which have an empty scheme) are
 	// allowed; other schemes such as mailto, javascript, tel, ftp, data are
-	// rejected.
+	// rejected. This already excludes any javascript: pseudo-protocol, so no
+	// further path-based filtering is needed.
 	if parsedRaw.Scheme != "" && parsedRaw.Scheme != "http" && parsedRaw.Scheme != "https" {
-		return ""
-	}
-
-	// Remove old JavaScript functions
-	if strings.ContainsAny(parsedRaw.Path, "()") {
 		return ""
 	}
 
