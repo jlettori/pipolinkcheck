@@ -110,6 +110,7 @@ func (p *HTMLPage) ExtractLinks() {
 	var pending *Link
 	var pendingText strings.Builder
 	var stack []elemSelector
+	var skipDepth int
 
 	for {
 		tokenType := tokenizer.Next()
@@ -120,6 +121,12 @@ func (p *HTMLPage) ExtractLinks() {
 		switch tokenType {
 		case html.StartTagToken:
 			token := tokenizer.Token()
+
+			// script/style bodies are raw text, not visible link text; track a
+			// nesting depth so their content never leaks into anchor names.
+			if token.Data == "script" || token.Data == "style" {
+				skipDepth++
+			}
 
 			if pending != nil && pending.Type == LinkTypeHyperlink && token.Data == "a" {
 				continue
@@ -150,12 +157,18 @@ func (p *HTMLPage) ExtractLinks() {
 			p.c.enqueueLink(*l)
 
 		case html.TextToken:
+			if skipDepth > 0 {
+				continue
+			}
 			if pending != nil {
 				pendingText.WriteString(tokenizer.Token().Data)
 			}
 
 		case html.EndTagToken:
 			token := tokenizer.Token()
+			if (token.Data == "script" || token.Data == "style") && skipDepth > 0 {
+				skipDepth--
+			}
 			if pending != nil && token.Data == "a" {
 				if name := strings.TrimSpace(pendingText.String()); name != "" {
 					pending.LinkName = name

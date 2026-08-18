@@ -490,6 +490,54 @@ func TestExtractLinksSelfClosingAndVoidElements(t *testing.T) {
 	}
 }
 
+func TestExtractLinksAnchorExcludesScript(t *testing.T) {
+	// Inline script/style content is not visible link text and must not leak
+	// into the anchor's LinkName.
+	htmlContent := `<html><body>
+		<a href="/page1">UTPF (Union des Transports Publics et Ferroviaires)
+<script>document.getElementById("tms_1b79bb87-eb12-4913-bf5f-6f592b980682").parentNode.addEventListener("click",function(){tc_vars={}});</script>
+UTPF</a>
+		<a href="/page2"><style>.btn{color:red}</style>Styled</a>
+	</body></html>`
+
+	cfg, err := NewConfigWithOptions(&Config{
+		BaseURL:     "https://example.com",
+		AllowedURLs: "https://example.com",
+		OutputFile:  t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+
+	NewHTMLPage(c, strings.NewReader(htmlContent), "https://example.com/").ExtractLinks()
+
+	names := map[string]string{}
+	for {
+		select {
+		case l := <-c.linkCh:
+			if l.Type == LinkTypeHyperlink {
+				names[l.URL] = l.LinkName
+			}
+		default:
+			goto done
+		}
+	}
+done:
+
+	want1 := "UTPF (Union des Transports Publics et Ferroviaires)\n\nUTPF"
+	if names["https://example.com/page1"] != want1 {
+		t.Errorf("LinkName with script = %q; want %q", names["https://example.com/page1"], want1)
+	}
+	if strings.Contains(names["https://example.com/page1"], "document.getElementById") {
+		t.Errorf("LinkName should not contain JS: %q", names["https://example.com/page1"])
+	}
+	if names["https://example.com/page2"] != "Styled" {
+		t.Errorf("LinkName with style = %q; want %q", names["https://example.com/page2"], "Styled")
+	}
+}
+
 func TestExtractLinksNestedAnchorSkipped(t *testing.T) {
 	// Nested <a> inside an outer <a> is invalid HTML; the inner anchor must be
 	// skipped so it does not clobber the pending outer anchor's link text.
