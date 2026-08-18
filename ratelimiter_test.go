@@ -91,6 +91,32 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 }
 
+func TestRateLimiter_GlobalRateAcrossConcurrentCallers(t *testing.T) {
+	rl := NewRateLimiter(10)
+	defer rl.Stop()
+
+	// Two callers issuing 5 waits each: if the rate were enforced per caller,
+	// both would finish in ~500ms. Enforced globally, the 10 requests must be
+	// spaced at 10/s (~900ms total).
+	start := time.Now()
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				rl.Wait()
+			}
+		}()
+	}
+	wg.Wait()
+	elapsed := time.Since(start)
+
+	if elapsed < 800*time.Millisecond {
+		t.Errorf("10 concurrent waits at 10/s took %v; want >= 800ms (global rate)", elapsed)
+	}
+}
+
 func TestRateLimiter_StopIdempotent(t *testing.T) {
 	rl := NewRateLimiter(10)
 	rl.Stop()

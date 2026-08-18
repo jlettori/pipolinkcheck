@@ -5,15 +5,16 @@ import (
 	"time"
 )
 
-// RateLimiter controls the rate of requests using a minimum interval between
-// consecutive requests. The rate can be adjusted at runtime via Increase or
-// Decrease.
+// RateLimiter limits the rate of requests to a fixed number per second,
+// enforced globally across all callers. The rate can be adjusted at runtime via
+// Increase or Decrease.
 type RateLimiter struct {
-	mu          sync.Mutex    // mu guards rate, initialRate, and stopped.
-	rate        int           // rate is the current maximum requests per second.
-	initialRate int           // initialRate is the ceiling the rate recovers to after a Decrease.
-	stopCh      chan struct{} // stopCh closes to stop the auto-increase goroutine.
-	stopped     bool          // stopped is true once Stop has been called.
+	mu          sync.Mutex // mu guards rate, initialRate, nextAllowed, and stopped.
+	rate        int        // rate is the current maximum requests per second.
+	initialRate int        // initialRate is the ceiling the rate recovers to after a Decrease.
+	nextAllowed time.Time  // nextAllowed is the earliest time the next request may fire.
+	stopCh      chan struct{}
+	stopped     bool
 }
 
 // NewRateLimiter creates a RateLimiter that allows up to n requests per second.
@@ -75,19 +76,28 @@ func (rl *RateLimiter) Decrease() {
 	rl.rate = max(minReqsPerSecond, rl.rate-1)
 }
 
-// Wait blocks until the next request is allowed by the rate limit.
+// Wait blocks until the next request is allowed by the rate limit. Each call
+// reserves the next globally spaced slot, so concurrent callers are throttled
+// to the configured rate as a whole: a caller that arrives while others are
+// waiting joins the queue instead of sleeping a full interval on its own.
 func (rl *RateLimiter) Wait() {
-	// Build a fresh timer for the current rate under the lock. A per-call
-	// timer avoids sharing a single time.Ticker between Wait and the resizing
-	// methods, which would race on Ticker.Reset (and could deadlock Wait after
-	// Stop, as stopping a ticker never drains its channel).
 	rl.mu.Lock()
+	if rl.stopped {
+		rl.mu.Unlock()
+		return
+	}
 	interval := time.Second / time.Duration(rl.rate)
+	now := time.Now()
+	if rl.nextAllowed.Before(now) {
+		rl.nextAllowed = now
+	}
+	wait := rl.nextAllowed.Sub(now)
+	rl.nextAllowed = rl.nextAllowed.Add(interval)
 	rl.mu.Unlock()
 
-	timer := time.NewTimer(interval)
-	defer timer.Stop()
-	<-timer.C
+	if wait > 0 {
+		time.Sleep(wait)
+	}
 }
 
 // Stop stops the auto-increase goroutine and marks the limiter as stopped.
