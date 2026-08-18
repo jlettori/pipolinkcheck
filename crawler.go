@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -246,6 +247,43 @@ func (c *Crawler) atLinkLimit() bool {
 			log.Printf("reached the maximum of %d unique links; stopping discovery of new links", c.cfg.MaxLinks)
 		}
 		return true
+	}
+
+	return false
+}
+
+// reportError records a broken-link in the stats and sends it to the resultCh channel.
+func (c *Crawler) reportError(link Link, statusCode ErrorCode, errMsg string) {
+	c.stats.RecordError(link.Type, statusCode)
+
+	c.resultCh <- BrokenLink{
+		sourcePage: link.SourcePage,
+		linkType:   link.Type,
+		brokenURL:  link.URL,
+		statusCode: statusCode,
+		errorMsg:   errMsg,
+		linkName:   link.LinkName,
+		selector:   link.Selector,
+	}
+}
+
+// isAllowed determines if a given URL is permitted based on allowed and excluded URL prefix lists.
+func (c *Crawler) isAllowed(targetURL string) bool {
+	target, err := url.Parse(targetURL)
+	if err != nil {
+		return false
+	}
+
+	for i := range c.cfg.excludedURL {
+		if urlMatchesPrefix(target, &c.cfg.excludedURL[i]) {
+			return false
+		}
+	}
+
+	for i := range c.cfg.allowedURL {
+		if urlMatchesPrefix(target, &c.cfg.allowedURL[i]) {
+			return true
+		}
 	}
 
 	return false
