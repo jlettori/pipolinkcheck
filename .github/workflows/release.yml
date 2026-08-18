@@ -21,6 +21,10 @@ jobs:
           check-latest: true
       - name: Run tests
         run: make test
+      - name: Install signing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osslsigncode
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -29,3 +33,5 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WINDOWS_SIGNING_PFX: ${{ secrets.WINDOWS_SIGNING_PFX }}
+          WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}

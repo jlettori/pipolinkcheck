@@ -24,6 +24,42 @@ go build .
 The resulting `pipolinkcheck` binary is ready to use. You can also build it
 with `make build`.
 
+## Antivirus false positives
+
+Unsigned Go binaries are frequently flagged by antivirus software as
+suspicious, even when they are completely clean. This is a known false
+positive caused by heuristics matching statically-linked Go executables.
+
+To confirm the binary you build is safe, rebuild from this source and compare
+the SHA-256 hash — a reproducible build from the same revision always produces
+the same bytes.
+
+Release binaries are code-signed when a signing certificate is provided (see
+below); signed binaries are trusted by most antivirus products. For locally
+built development binaries, add the binary (or your build directory) to your
+antivirus exclusion list.
+
+### Code signing releases
+
+Release binaries are signed when the corresponding secrets are configured in
+GitHub. Signing runs via `scripts/sign.sh` and is skipped entirely when no
+certificate is configured, so releases work without it.
+
+| Platform | Secret(s) | Tool |
+|----------|-----------|------|
+| Windows | `WINDOWS_SIGNING_PFX`, `WINDOWS_SIGNING_PASSWORD` | `osslsigncode` (PKCS#12 `.pfx`) |
+| macOS | `MACOS_SIGNING_IDENTITY` | `codesign` (must run on macOS) |
+
+To enable Windows Authenticode signing, obtain a code-signing certificate
+(typically from your work's IT department), export it as a `.pfx` with its
+password, and store the certificate contents and password as the two GitHub
+repository secrets above. Note that a freshly signed binary may still be
+flagged until the certificate builds reputation; you can submit a signed
+release to VirusTotal to speed this up.
+
+macOS signing additionally requires notarization to be fully trusted by
+Gatekeeper; `codesign` alone covers AV heuristics but not notarization.
+
 ## Usage
 
 ```bash
