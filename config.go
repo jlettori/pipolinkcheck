@@ -65,6 +65,7 @@ type Config struct {
 	LogFile      string // LogFile is the path of the stats log file.
 	Verbose      bool   // Verbose enables detailed logging output.
 	InsecureTLS  bool   // InsecureTLS skips TLS certificate verification.
+	NoExternal   bool   // NoExternal skips checking links outside the allowed prefixes.
 
 	allowedURL  []url.URL // allowedURL holds the parsed allowed URL prefixes.
 	excludedURL []url.URL // excludedURL holds the parsed excluded URL prefixes.
@@ -103,6 +104,7 @@ func newFlagSet(cfg *Config) *flag.FlagSet {
 	fs.StringVar(&cfg.UserAgent, "user-agent", defaultUserAgent, "User-Agent header sent with every request")
 	fs.BoolVar(&cfg.Verbose, "verbose", true, "detailed logging output for debugging and monitoring purposes")
 	fs.BoolVar(&cfg.InsecureTLS, "insecure-tls", false, "skips TLS certificate verification (not recommended)")
+	fs.BoolVar(&cfg.NoExternal, "no-external", false, "skips checking links outside the allowed prefixes")
 
 	return fs
 }

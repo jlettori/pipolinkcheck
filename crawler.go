@@ -149,6 +149,13 @@ func (c *Crawler) process(link Link) {
 		method = "HEAD"
 	}
 
+	// With -no-external, out-of-scope links are never requested, so pages on a
+	// sensitive network cannot be made to probe hosts outside the allowed
+	// prefixes merely by referencing them in crawled HTML.
+	if c.cfg.NoExternal && !c.isAllowed(link.URL) {
+		return
+	}
+
 	resp := c.do(link, method)
 	if resp == nil {
 		return

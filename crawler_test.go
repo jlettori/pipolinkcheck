@@ -527,6 +527,41 @@ func TestProcessLinkOutsideAllowedNotCrawled(t *testing.T) {
 	}
 }
 
+func TestProcessLinkOutsideAllowedNotCheckedWhenNoExternal(t *testing.T) {
+	// With -no-external, out-of-scope links must not be requested at all, so
+	// the external server never sees a request and no result is recorded.
+	external := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("external server received a request despite -no-external")
+	}))
+	defer external.Close()
+
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+	}))
+	defer site.Close()
+
+	cfg, err := NewConfigWithOptions(&Config{
+		BaseURL:     site.URL,
+		AllowedURLs: site.URL,
+		NoExternal:  true,
+		UserAgent:   "test",
+		OutputFile:  t.TempDir() + "/test.csv",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := mustNewCrawler(t, cfg)
+	defer c.Close()
+
+	c.process(Link{SourcePage: site.URL, URL: external.URL + "/broken", Type: LinkTypeHyperlink})
+
+	select {
+	case res := <-c.resultCh:
+		t.Errorf("expected no result for an out-of-scope link with -no-external, got %+v", res)
+	default:
+	}
+}
+
 func TestSanitizeLog(t *testing.T) {
 	tests := []struct{ in, want string }{
 		{"", ""},
