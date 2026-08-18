@@ -19,18 +19,9 @@ builds:
       - arm64
     binary: >-
       {{ .ProjectName }}_{{ .Os }}_{{ .Arch }}
-
-binary_signs:
-  - id: code-sign
-    cmd: sh
-    args:
-      - "-c"
-      - "./scripts/sign.sh '${artifact}'"
-    env:
-      - WINDOWS_SIGNING_PFX={{ envOrDefault "WINDOWS_SIGNING_PFX" "" }}
-      - WINDOWS_SIGNING_PASSWORD={{ envOrDefault "WINDOWS_SIGNING_PASSWORD" "" }}
-      - MACOS_SIGNING_IDENTITY={{ envOrDefault "MACOS_SIGNING_IDENTITY" "" }}
-    artifacts: binary
+    hooks:
+      post:
+        - cmd: ./scripts/sign.sh "{{ .Path }}"
 
 checksum:
   name_template: 'checksums.txt'
