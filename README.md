@@ -30,6 +30,23 @@ Unsigned Go binaries are frequently flagged by antivirus software as
 suspicious, even when they are completely clean. This is a known false
 positive caused by heuristics matching statically-linked Go executables.
 
+The most common detection is Microsoft Defender's
+`Trojan:Win32/Wacatac.C!ml`. The `!ml` suffix means it comes from a
+machine-learning heuristic, not a malware signature, and it is widely reported
+against freshly built Go binaries (especially when built with a very recent Go
+toolchain, before antivirus vendors update their models). It is a false
+positive: this repository only crawls and checks the links of websites.
+
+If you get a `Wacatac.C!ml` detection, the fastest way to clear it is to
+report the file to Microsoft's security team as a false positive:
+
+1. Rebuild the binary from this source so you can attest it is yours.
+2. Submit it to <https://www.microsoft.com/wdsi/filesubmission> (sign in with
+   a Microsoft account), selecting *"My submission was incorrectly detected as
+   malware"* and noting the build revision.
+3. Also add an exclusion in Defender for your local build directory so the
+   binary is usable while Microsoft processes the report.
+
 To confirm the binary you build is safe, rebuild from this source and compare
 the SHA-256 hash — a reproducible build from the same revision always produces
 the same bytes.
@@ -50,12 +67,60 @@ certificate is configured, so releases work without it.
 | Windows | `WINDOWS_SIGNING_PFX`, `WINDOWS_SIGNING_PASSWORD` | `osslsigncode` (PKCS#12 `.pfx`) |
 | macOS | `MACOS_SIGNING_IDENTITY` | `codesign` (must run on macOS) |
 
-To enable Windows Authenticode signing, obtain a code-signing certificate
-(typically from your work's IT department), export it as a `.pfx` with its
-password, and store the certificate contents and password as the two GitHub
-repository secrets above. Note that a freshly signed binary may still be
-flagged until the certificate builds reputation; you can submit a signed
-release to VirusTotal to speed this up.
+### How to produce a signed Windows binary
+
+1. **Get a code-signing certificate.** Authenticode signing needs an
+   organization-validation (OV) certificate — obtain one from your work's IT
+   department, or buy one from a commercial CA (DigiCert, Sectigo,
+   GlobalSign). A self-signed certificate does **not** help: it has no
+   reputation and can *increase* detections.
+2. **Export it as a PKCS#12 `.pfx`** that includes the private key, and note
+   the password you set on it.
+3. **Base64-encode the `.pfx`** so it can be stored as a GitHub secret:
+   ```bash
+   base64 -w0 your-cert.pfx > your-cert.pfx.b64
+   ```
+4. **Add two repository secrets** (Settings → Secrets and variables →
+   Actions):
+   - `WINDOWS_SIGNING_PFX` = the full contents of `your-cert.pfx.b64`
+   - `WINDOWS_SIGNING_PASSWORD` = the `.pfx` password
+5. **Push a `v*` tag.** The release workflow decodes the certificate, signs
+   every `.exe` it builds, then verifies the signatures before publishing.
+   If signing fails, the workflow fails so no unsigned binary ships.
+
+Note that a freshly issued certificate still needs to build reputation — the
+first signed releases may be flagged until AV vendors see the certificate used
+by legitimate software over time. Submitting the signed release to VirusTotal
+and to Microsoft's <https://www.microsoft.com/wdsi/filesubmission> speeds this
+up.
+
+### Which code-signing certificate to buy
+
+Check with your organization's IT department first — many companies already own
+a code-signing certificate you can use for internal tools at no cost. If you
+must buy one, an OV certificate from a commercial CA is the right choice for a
+project like this. Prices are per certificate, per year (reseller prices run
+below list prices):
+
+| CA | OV price (approx.) | Notes |
+|----|--------------------|-------|
+| Sectigo | ~$220/year | Cheapest of the major CAs |
+| DigiCert | ~$409–439/year | Premium brand, enterprise focus |
+| GlobalSign | ~$300–400/year | Quote at checkout, not public |
+
+Two things drive the real cost up:
+
+1. **Mandatory hardware** — since 2023 the private key must live on a FIPS
+   140-2 L2 USB token (e.g. YubiKey) or HSM. Budget $50–130 extra for the token
+   plus shipping, or a cloud-signing subscription (~$200+/year on top of the
+   certificate).
+2. **Shorter validity** — since 2026 the CA/Browser Forum caps code-signing
+   certificates at 460 days, so multi-year plans are delivered as annual
+   reissues.
+
+For this project an OV certificate does what an EV certificate would (EV no
+longer grants instant SmartScreen reputation either), so buy OV unless a driver
+submission or procurement rule forces EV.
 
 macOS signing additionally requires notarization to be fully trusted by
 Gatekeeper; `codesign` alone covers AV heuristics but not notarization.

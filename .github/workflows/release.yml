@@ -25,6 +25,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y osslsigncode
+      - name: Prepare signing certificate
+        env:
+          WINDOWS_SIGNING_PFX_B64: ${{ secrets.WINDOWS_SIGNING_PFX }}
+        if: env.WINDOWS_SIGNING_PFX_B64 != ''
+        run: |
+          echo "$WINDOWS_SIGNING_PFX_B64" | base64 --decode > /tmp/pipolinkcheck.pfx
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -33,8 +39,17 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WINDOWS_SIGNING_PFX: ${{ secrets.WINDOWS_SIGNING_PFX }}
+          WINDOWS_SIGNING_PFX: /tmp/pipolinkcheck.pfx
           WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
+      - name: Verify Windows signature
+        env:
+          WINDOWS_SIGNING_PFX_B64: ${{ secrets.WINDOWS_SIGNING_PFX }}
+        if: env.WINDOWS_SIGNING_PFX_B64 != ''
+        run: |
+          for f in dist/*/*.exe; do
+            osslsigncode verify "$f" | grep -qE "Number of verified signatures: [1-9]" || { echo "unsigned: $f"; exit 1; }
+          done
+          echo "All Windows binaries signed."
       - name: VirusTotal Scan
         uses: crazy-max/ghaction-virustotal@v5
         with:
