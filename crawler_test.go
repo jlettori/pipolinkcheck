@@ -142,7 +142,7 @@ func TestProcess_NonHTML(t *testing.T) {
 	c.process(Link{SourcePage: server.URL, URL: server.URL + "/", Type: LinkTypeHyperlink})
 
 	count := 0
-	c.visited.Range(func(_, _ interface{}) bool {
+	c.visited.Range(func(_, _ any) bool {
 		count++
 		return true
 	})
@@ -200,7 +200,7 @@ func TestProcessExcluded(t *testing.T) {
 	c.process(Link{SourcePage: server.URL, URL: server.URL + "/excluded", Type: LinkTypeHyperlink})
 
 	count := 0
-	c.visited.Range(func(_, _ interface{}) bool {
+	c.visited.Range(func(_, _ any) bool {
 		count++
 		return true
 	})
@@ -266,7 +266,7 @@ func TestProcessNonHyperlink(t *testing.T) {
 
 	// Non-hyperlinks use HEAD, so extraction won't run. No visited URLs expected.
 	count := 0
-	c.visited.Range(func(_, _ interface{}) bool {
+	c.visited.Range(func(_, _ any) bool {
 		count++
 		return true
 	})
@@ -1017,7 +1017,7 @@ func TestRunCompletesWithFullWorkQueue(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		var b strings.Builder
-		for i := 0; i < paths; i++ {
+		for i := range paths {
 			fmt.Fprintf(&b, `<a href="/p%d">Page %d</a>`, i, i)
 		}
 		w.Write([]byte(b.String()))

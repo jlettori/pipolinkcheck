@@ -108,10 +108,7 @@ func (c *Crawler) do(link Link, method string) *http.Response {
 		// Full-jitter exponential backoff: each delay is chosen uniformly in
 		// [0, base*2^attempt), capped at backoffMax. This spreads retries for
 		// many simultaneous timeouts and avoids thundering-herd synchronisation.
-		maxDelay := backoffBase * (1 << attempt)
-		if maxDelay > backoffMax {
-			maxDelay = backoffMax
-		}
+		maxDelay := min(backoffBase*(1<<attempt), backoffMax)
 		// #nosec G404 -- backoff jitter is not security-sensitive; math/rand/v2 is fine.
 		time.Sleep(time.Duration(rand.Int64N(int64(maxDelay))))
 	}
@@ -130,8 +127,7 @@ func isRetryable(err error) bool {
 		return true
 	}
 
-	var netErr net.Error
-	if errors.As(err, &netErr) {
+	if netErr, ok := errors.AsType[net.Error](err); ok {
 		return netErr.Timeout() || netErr.Temporary()
 	}
 

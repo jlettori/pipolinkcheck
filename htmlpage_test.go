@@ -152,7 +152,7 @@ func TestExtractLinks(t *testing.T) {
 	}
 
 	count := 0
-	c.visited.Range(func(_, _ interface{}) bool {
+	c.visited.Range(func(_, _ any) bool {
 		count++
 		return true
 	})
@@ -321,11 +321,11 @@ func TestExtractLinksSelectorFullDepth(t *testing.T) {
 	var b strings.Builder
 	b.WriteString(`<html><body>`)
 	const depth = 10
-	for i := 0; i < depth; i++ {
+	for range depth {
 		b.WriteString(`<div class="a"><section class="b"><ul class="c"><li class="d">`)
 	}
 	b.WriteString(`<a href="/deep">deep</a>`)
-	for i := 0; i < depth; i++ {
+	for range depth {
 		b.WriteString(`</li></ul></section></div>`)
 	}
 	b.WriteString(`</body></html>`)
@@ -483,7 +483,7 @@ func TestExtractLinksSelfClosingAndVoidElements(t *testing.T) {
 
 	// br, input and meta are not link elements and must not be enqueued.
 	count := 0
-	c.visited.Range(func(_, _ interface{}) bool {
+	c.visited.Range(func(_, _ any) bool {
 		count++
 		return true
 	})

@@ -50,7 +50,7 @@ func TestRateLimiter_WaitThrottles(t *testing.T) {
 	defer rl.Stop()
 
 	start := time.Now()
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		rl.Wait()
 	}
 	elapsed := time.Since(start)
@@ -66,7 +66,7 @@ func TestRateLimiter_WaitPacesAcrossSecond(t *testing.T) {
 	defer rl.Stop()
 
 	start := time.Now()
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		rl.Wait()
 	}
 	elapsed := time.Since(start)
@@ -81,12 +81,10 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 	defer rl.Stop()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 10 {
+		wg.Go(func() {
 			rl.Wait()
-		}()
+		})
 	}
 	wg.Wait()
 }
@@ -100,14 +98,12 @@ func TestRateLimiter_GlobalRateAcrossConcurrentCallers(t *testing.T) {
 	// spaced at 10/s (~900ms total).
 	start := time.Now()
 	var wg sync.WaitGroup
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 5; j++ {
+	for range 2 {
+		wg.Go(func() {
+			for range 5 {
 				rl.Wait()
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	elapsed := time.Since(start)
